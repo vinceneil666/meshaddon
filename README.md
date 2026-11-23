@@ -112,6 +112,15 @@ cp myscript.sh /opt/meshaddon/scripts/ && chmod +x /opt/meshaddon/scripts/myscri
 - **Reply:** the script's stdout (max 140 characters) becomes the reply on the channel.
 - **Description:** add `# desc: …` near the top of the script to show a description in the GUI.
 
+## Security notes
+
+- **Change the repeater's admin password.** MeshCore ships with `password`. Anyone in radio range who knows that can log in remotely and reconfigure the node. Over USB: `password <new>`.
+- **Hashtag channels are public.** The key of `#relay` is derived from its name, so anyone can join it and send `!…` commands. Use a private channel with a random key for relays and Pi scripts.
+- **The sender allow-list is not authentication.** The sender name in a channel message is chosen by the sender. Only the channel key protects your commands.
+- **Pi scripts get untrusted arguments.** meshaddond never uses a shell and only allows `[A-Za-z0-9_.,:=@+/-]`, but a script must still treat `$1…` as hostile (e.g. `../`, or a leading `-` passed on to another command).
+- **Hosting:** Web Serial permission, `localStorage` (the last backup, including the channel key) and cookies are shared by everything on the same origin. Host the configurator on its **own origin** (e.g. a subdomain), not next to a CMS or forum. `deploy/apache/htaccess` sets a strict CSP (hash-pinned inline script), `frame-ancestors 'none'` and `nosniff`.
+- **Only restore backup files you made yourself.** Restore only applies known settings, but the values still go to the device.
+
 ## Hardware
 
 **Heltec WiFi LoRa 32 V4:** ESP32-S3R2 (16 MB flash, 2 MB PSRAM), SX1262 with a PA front end, OLED, native USB-C. 3.3 V logic.

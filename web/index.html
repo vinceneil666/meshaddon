@@ -471,6 +471,7 @@ const serial = {
     }
   },
   async send(cmd){
+    cmd = String(cmd).replace(/[\x00-\x1f\x7f]/g, " ");   // one command = one line: no CR/LF injection
     log("tx", cmd);
     await this.writer.write(new TextEncoder().encode(cmd+"\r"));
   },
@@ -991,7 +992,7 @@ function renderWizard(){
       h += `<label class="small muted">${esc(k)}</label><div>${input}<div class="small muted" style="margin-top:2px">${esc(help)}</div></div>`;
     }
     h += `</div><details class="hw" style="margin-top:10px"><summary class="small">Advanced</summary>
-      <div class="form" style="margin-top:6px"><label class="small muted">LPP channel</label><div><input id="wzCh" type="number" min="1" max="99" value="${wz.ch}">
+      <div class="form" style="margin-top:6px"><label class="small muted">LPP channel</label><div><input id="wzCh" type="number" min="1" max="99" value="${+wz.ch||1}">
       <div class="small muted" style="margin-top:2px">Telemetry channel number shown in the app/HA. Picked automatically.</div></div></div></details>
       <p class="small muted">The name appears in <span class="rulecmd">!status</span> replies and in the topology view. Short names are best; replies are limited to ~140 characters.</p>`;
     B.innerHTML = h;
@@ -1098,7 +1099,7 @@ function openSlot(s, isNew){
   let h = `<label class="small muted">Label</label><input id="fLabel" value="${esc(s.label)}" maxlength="20">
            <label class="small muted">${t.pins===2?"SDA":"GPIO"}</label><select id="fPin">${opt(s.pin)}</select>`;
   if (t.pins===2) h += `<label class="small muted">SCL</label><select id="fPin2">${opt(s.pin2)}</select>`;
-  h += `<label class="small muted">LPP channel</label><input id="fCh" type="number" min="1" max="99" value="${s.ch}">`;
+  h += `<label class="small muted">LPP channel</label><input id="fCh" type="number" min="1" max="99" value="${+s.ch||1}">`;
   for (const [k,v] of Object.entries(s.opts||{})) h += `<label class="small muted">${esc(k)}</label><input data-opt="${esc(k)}" value="${esc(v)}">`;
   h += `<span></span><span class="small muted">Telemetry type: ${esc(t.lpp)}</span>`;
   $("#dlgForm").innerHTML = h;
@@ -1387,7 +1388,10 @@ $("#fwRestore").onchange = async e=>{
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   let b; try { b = JSON.parse(await f.text()); } catch(_){ return log("err","not a JSON file"); }
   if (!b.meshaddon_backup) return log("err","not a MeshAddon backup file");
-  for (const [k,v] of Object.entries(b.settings||{})) stage("set:"+k, `set ${k} ${v}`);
+  for (const [k,v] of Object.entries(b.settings||{})){
+    if (!BACKUP_KEYS.includes(k)) { log("err",`restore: ignored unknown setting "${k}"`); continue; }
+    stage("set:"+k, `set ${k} ${String(v).replace(/[\x00-\x1f\x7f]/g," ")}`);
+  }
   if (b.addon){
     (b.addon.slots||[]).forEach(s=>stage("slot"+s.slot, slotCmd({...s, label:s.label||"slot"+s.slot})));
     const c = b.addon.chan; if (c) stage("chan", `addon chan ${c.name},${c.key||"-"},${c.prefix||"!"},${c.allow||"*"}`);
