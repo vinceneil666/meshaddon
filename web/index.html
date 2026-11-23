@@ -434,7 +434,11 @@ const serial = {
   async open(port){
     this.port = port || await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});
     this.lastPort = this.port;
-    await this.port.open({baudRate:115200});
+    await this.port.open({baudRate:115200, bufferSize:65536});   // default 255 B overruns on "addon dump"
+    this.closing = false;
+    if (!this._dc){ this._dc = true; navigator.serial.addEventListener("disconnect", e=>{
+      if (e.target===this.port && !this.closing){ log("err","USB device was unplugged or reset — click Connect USB again"); this.port=null; this.waiters.splice(0).forEach(w=>w(null)); }
+    }); }
     // ESP32-S3 native USB: avoid DTR/RTS reset on open
     try { await this.port.setSignals({dataTerminalReady:false, requestToSend:false}); } catch(e){}
     this.writer = this.port.writable.getWriter();
@@ -455,9 +459,12 @@ const serial = {
             if (line.trim()) onLine(line);
           }
         }
-      } catch(e){ log("err","serial: "+e.message); }
-      finally { this.reader.releaseLock(); }
-      break;
+      } catch(e){
+        // BufferOverrun/Framing/Parity errors are non-fatal: port.readable is replaced, keep reading
+        if (!this.closing) log("err","serial: "+(e.name||"")+" "+e.message+" (recovered)");
+      }
+      finally { try { this.reader.releaseLock(); } catch(_){} }
+      if (this.closing) break;
     }
   },
   async send(cmd){
@@ -474,6 +481,7 @@ const serial = {
     });
   },
   async close(){
+    this.closing = true;
     try{ await this.reader?.cancel(); }catch(e){}
     try{ this.writer?.releaseLock(); }catch(e){}
     try{ await this.port?.close(); }catch(e){}
@@ -582,9 +590,9 @@ function fakeValue(s){
 /* ============================================================
  * Unified command API
  * ============================================================ */
-async function devCmd(c){
+async function devCmd(c, timeout){
   if (state.mode==="demo") return demo.cmd(c);
-  if (state.mode==="serial") return serial.cmd(c);
+  if (state.mode==="serial") return serial.port ? serial.cmd(c, timeout) : null;
   return null;
 }
 
@@ -616,7 +624,12 @@ function fmtUp(s){ const d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Ma
 /* Pending changes -> CLI commands (MeshAddon CLI, see docs/PROTOCOL.md) */
 function stage(key, cmd){ state.pending.set(key, cmd); renderPending(); }
 async function applyPending(){
-  for (const [k,c] of state.pending){ const r = await devCmd(c); if (r===null) { log("err","no reply for: "+c); return; } }
+  for (const [k,c] of state.pending){
+    let r = await devCmd(c);
+    if (r===null && serial.port) r = await devCmd(c);           // one retry
+    if (r===null) { log("err","no reply for: "+c+(serial.port?"":" (not connected)")); return; }
+    if (/^Error/i.test(r)) { log("err",c+" → "+r); return; }
+  }
   await devCmd("addon save");
   state.pending.clear(); renderPending();
   log("evt","changes saved to flash");
