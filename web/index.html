@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeshAddon Configurator</title>
+<style>
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --ink:#18202a; --muted:#5d6b7a; --line:#d7dde4;
+  --accent:#0b7a75; --accent2:#c2410c; --pi:#b0124d; --ok:#15803d; --warn:#b45309; --err:#b91c1c;
+  --board:#1d3b2a; --board-ink:#e6f2ea; --pin:#c9a227; --free:#e8f5ef; --used:#eef0f3;
+  --flow-rf:#2563eb; --flow-tele:#0b7a75; --flow-cmd:#c2410c; --flow-pi:#b0124d;
+  --mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1419; --panel:#161d25; --ink:#e4e9ee; --muted:#93a1b0; --line:#2a3542;
+  --accent:#2dd4bf; --accent2:#fb923c; --pi:#f472b6; --ok:#4ade80; --warn:#fbbf24; --err:#f87171;
+  --board:#14301f; --free:#173327; --used:#1c242e;
+  --flow-rf:#60a5fa; --flow-tele:#2dd4bf; --flow-cmd:#fb923c; --flow-pi:#f472b6;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1419; --panel:#161d25; --ink:#e4e9ee; --muted:#93a1b0; --line:#2a3542;
+  --accent:#2dd4bf; --accent2:#fb923c; --pi:#f472b6; --ok:#4ade80; --warn:#fbbf24; --err:#f87171;
+  --board:#14301f; --free:#173327; --used:#1c242e;
+  --flow-rf:#60a5fa; --flow-tele:#2dd4bf; --flow-cmd:#fb923c; --flow-pi:#f472b6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0 12px 0 0;letter-spacing:.2px}
+header h1 span{color:var(--accent)}
+.pill{font:12px var(--mono);padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.on{color:var(--ok);border-color:var(--ok)}
+.pill.demo{color:var(--warn);border-color:var(--warn)}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] button.primary{color:#062a28}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#062a28}}
+button:disabled{opacity:.45;cursor:not-allowed}
+select,input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
+.spacer{flex:1}
+main{display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:12px;padding:12px 16px}
+@media (max-width:1200px){main{grid-template-columns:minmax(0,1fr)} }
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:13px}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;font-family:var(--mono);overflow-wrap:anywhere}
+#topo{width:100%;height:auto;aspect-ratio:900/440;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 10px}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:var(--muted)}
+.tabs button.active{color:var(--ink);border-bottom-color:var(--accent)}
+.tab{display:none}.tab.active{display:block}
+#board{width:100%;height:auto;display:block;max-width:760px;margin:0 auto}
+.pinlabel{font:10px var(--mono);fill:var(--muted)}
+.palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);border-radius:8px;padding:6px 8px;cursor:grab;font-size:12px;background:var(--bg);user-select:none}
+.chip b{display:block;font-size:12.5px}
+.chip small{color:var(--muted)}
+.chip.sel{outline:2px solid var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.num{font-family:var(--mono);text-align:right}
+.spark{width:90px;height:22px}
+#log{height:300px;overflow:auto;font:12px/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+#log .tx{color:var(--accent)} #log .rx{color:var(--ink)} #log .evt{color:var(--muted)} #log .err{color:var(--err)} #log .pi{color:var(--pi)} #log .cmd{color:var(--accent2)}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row > input{flex:1}
+.muted{color:var(--muted)} .small{font-size:12px}
+.badge{font:11px var(--mono);padding:1px 6px;border-radius:4px;background:var(--bg);border:1px solid var(--line)}
+.dlg{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.dlg.open{display:flex}
+.dlg .card{width:min(440px,100%)}
+.form{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center}
+.warnbox{border-left:3px solid var(--warn);padding:6px 10px;background:var(--bg);font-size:12.5px;margin:8px 0;border-radius:0 6px 6px 0}
+.rulecmd{font-family:var(--mono);color:var(--accent2)}
+.tabs button.primary{background:var(--accent);border:1px solid var(--accent);border-radius:8px;color:#fff;align-self:center}
+:root[data-theme="dark"] .tabs button.primary{color:#062a28}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.primary{color:#062a28}}
+.btnlike{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btnlike:hover{border-color:var(--accent)}
+.fwnotes{max-height:220px;overflow-y:auto;overflow-x:hidden;overflow-wrap:anywhere;margin-top:6px} .fwnotes a{color:var(--accent)}
+.fwrel{padding:6px 0;border-bottom:1px solid var(--line)} .fwrel div{color:var(--muted);margin-top:2px}
+#fwDl a{color:var(--accent)} #fwDl div{margin:3px 0}
+.flashopt{display:block;padding:5px 8px;border:1px solid var(--line);border-radius:8px;margin:4px 0;font-size:13px;cursor:pointer}
+.flashsteps{margin:12px 0 8px;padding-left:22px;font-size:13px}
+.flashsteps li{margin:3px 0;color:var(--muted)}
+.flashsteps li.run{color:var(--accent);font-weight:600} .flashsteps li.run::after{content:" …"}
+.flashsteps li.ok{color:var(--ok)} .flashsteps li.ok::after{content:" ✓"}
+.flashsteps li.err{color:var(--err)} .flashsteps li.err::after{content:" ✗"}
+.flashsteps li.warn{color:var(--warn)} .flashsteps li.skip{text-decoration:line-through}
+.pbar{height:8px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.pbar div{height:100%;width:0;background:var(--accent);transition:width .2s}
+.wizcard{width:min(860px,100%) !important;max-height:calc(100vh - 32px);overflow:auto}
+.wizsteps{display:flex;gap:10px;font-size:11px;text-transform:none;letter-spacing:0}
+.wizsteps span{color:var(--muted)} .wizsteps span.on{color:var(--accent);font-weight:600} .wizsteps span.done{color:var(--ok)}
+.wizgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.wiztype{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px;border-radius:10px;background:var(--bg)}
+.wiztype .ico{font-size:22px;line-height:1.2} .wiztype span{font-size:12px} .wiztype small{color:var(--muted);font-size:11px}
+.wiztype.sel{outline:2px solid var(--accent);border-color:var(--accent)}
+.wizcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+@media (max-width:700px){.wizcols{grid-template-columns:minmax(0,1fr)}}
+.wizlist{margin:0;padding-left:18px} .wizlist li{margin:2px 0}
+.hwhead{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+details.hw summary{cursor:pointer;color:var(--accent);margin:4px 0}
+details.hw dl{margin-top:6px} details.hw dd{font-family:inherit}
+#piWireNote code{font-size:11.5px}
+@keyframes pulse{0%{r:4}50%{r:7}100%{r:4}}
+.dot-live{animation:pulse 1.6s infinite}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mesh<span>Addon</span> Configurator</h1>
+  <span id="connPill" class="pill">disconnected</span>
+  <button id="btnConnect" class="primary">Connect USB</button>
+  <button id="btnDemo">Demo mode</button>
+  <button id="btnDisconnect" disabled>Disconnect</button>
+  <span class="spacer"></span>
+  <button id="btnRead" disabled title="Read config from device">Read device</button>
+  <button id="btnApply" disabled title="Write pending changes to device">Apply <span id="pendingCount" class="badge">0</span></button>
+  <button id="btnTheme" title="Toggle theme">◐</button>
+</header>
+
+<main>
+  <!-- LEFT -->
+  <section class="stack">
+    <div class="card">
+      <h2>Repeater hardware</h2>
+      <div class="hwhead">
+        <svg viewBox="0 0 64 40" width="64" height="40" aria-hidden="true"><rect x="1" y="4" width="62" height="32" rx="4" fill="var(--board)"/><rect x="6" y="9" width="24" height="15" rx="1.5" fill="#0a0f14" stroke="#4a5a6a"/><rect x="35" y="11" width="11" height="11" rx="1" fill="#2b3a47"/><rect x="49" y="12" width="9" height="9" rx="1" fill="#3d4b58"/><rect x="0" y="16" width="5" height="8" rx="1" fill="#9aa4ae"/><g fill="var(--pin)"><circle cx="8" cy="6.5" r="1"/><circle cx="14" cy="6.5" r="1"/><circle cx="20" cy="6.5" r="1"/><circle cx="26" cy="6.5" r="1"/><circle cx="32" cy="6.5" r="1"/><circle cx="38" cy="6.5" r="1"/><circle cx="44" cy="6.5" r="1"/><circle cx="50" cy="6.5" r="1"/><circle cx="56" cy="6.5" r="1"/><circle cx="8" cy="33.5" r="1"/><circle cx="14" cy="33.5" r="1"/><circle cx="20" cy="33.5" r="1"/><circle cx="26" cy="33.5" r="1"/><circle cx="32" cy="33.5" r="1"/><circle cx="38" cy="33.5" r="1"/><circle cx="44" cy="33.5" r="1"/><circle cx="50" cy="33.5" r="1"/><circle cx="56" cy="33.5" r="1"/></g></svg>
+        <div><b>Heltec WiFi LoRa 32 V4</b><div class="small muted">running as a MeshCore repeater</div></div>
+      </div>
+      <details class="hw">
+        <summary class="small">Board specifications</summary>
+        <dl class="kv small">
+          <dt>MCU</dt><dd>ESP32-S3R2, dual-core Xtensa LX7 up to 240 MHz (MeshCore runs it at 80 MHz)</dd>
+          <dt>Memory</dt><dd>16 MB flash, 2 MB PSRAM</dd>
+          <dt>LoRa</dt><dd>Semtech SX1262 + external PA/LNA front end (GC1109 / KCT8103L), 863–928 MHz</dd>
+          <dt>TX power</dt><dd>SX1262 set to 10 dBm → ~22 dBm after the PA (MeshCore default)</dd>
+          <dt>Display</dt><dd>0.96″ OLED 128×64 (SSD1306, I²C on GPIO17/18); some variants have a TFT</dd>
+          <dt>USB</dt><dd>USB-C, native ESP32-S3 USB (no UART bridge chip), VID 303a. This is the port the configurator uses.</dd>
+          <dt>Power</dt><dd>USB-C 5 V, or a 1S LiPo on the JST connector (onboard charger). Battery read on GPIO1.</dd>
+          <dt>GNSS</dt><dd>connector for a GPS module (GPIO38/39, enable 34)</dd>
+          <dt>Buttons</dt><dd>PRG/BOOT (GPIO0), RST</dd>
+          <dt>Free GPIO</dt><dd>3, 4, 6, 15, 16, 33, 40, 41, 45, 47, 48 (ADC on 3/4/6/15/16)</dd>
+          <dt>Logic</dt><dd>3.3 V, not 5 V tolerant</dd>
+        </dl>
+      </details>
+      <dl class="kv" id="devInfo" style="margin-top:10px">
+        <dt>Node name</dt><dd id="dName">–</dd>
+        <dt>Role</dt><dd id="dRole">–</dd>
+        <dt>Firmware</dt><dd id="dFw">–</dd>
+        <dt>Add-on</dt><dd id="dAddon">–</dd>
+        <dt>Radio</dt><dd id="dRadio">–</dd>
+        <dt>Battery</dt><dd id="dBatt">–</dd>
+        <dt>Uptime</dt><dd id="dUp">–</dd>
+      </dl>
+      <div id="addonWarn" class="warnbox" style="display:none">
+        Stock repeater firmware detected. Sensors and Pi bridging need the <b>MeshAddon</b> repeater build. Identity, name and radio settings are kept when flashing.
+        <div style="margin-top:6px"><button id="btnFlash">Install MeshAddon…</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Command channel</h2>
+      <div class="form">
+        <label class="small muted">Channel</label><input id="chName" placeholder="#relay">
+        <label class="small muted">Key (hex)</label><input id="chKey" placeholder="derived from #name if empty">
+        <label class="small muted">Prefix</label><input id="chPrefix" value="!" maxlength="3">
+        <label class="small muted">Allowed</label><input id="chAllow" placeholder="all senders, or alice,bob">
+      </div>
+      <p class="small muted" style="margin:8px 0 0">Messages on this channel that start with the prefix are answered by the Heltec itself. Only <span class="rulecmd">!run</span> goes to the Pi. Replies go back to the same channel.</p>
+    </div>
+
+    <div class="card">
+      <h2>Raspberry Pi Zero 2 W link</h2>
+      <div class="form">
+        <label class="small muted">Enabled</label><select id="piEn"><option value="1">yes</option><option value="0">no</option></select>
+        <label class="small muted">Connection</label><select id="piLink"><option value="uart">UART, 3 wires (recommended)</option><option value="usb">USB cable (planned)</option></select>
+        <label class="small muted uartonly">Heltec TX → Pi RX</label><select id="piTx" class="uartonly"></select>
+        <label class="small muted uartonly">Heltec RX ← Pi TX</label><select id="piRx" class="uartonly"></select>
+        <label class="small muted">Baud</label><select id="piBaud"><option>115200</option><option>230400</option><option>57600</option></select>
+      </div>
+      <svg id="piWire" viewBox="0 0 280 162" style="width:100%;height:auto;margin-top:10px" aria-label="Wiring between Heltec and Pi"></svg>
+      <div id="piWireNote" class="small" style="margin-top:4px"></div>
+      <dl class="kv" style="margin-top:10px">
+        <dt>Link</dt><dd id="piState">–</dd>
+        <dt>Host</dt><dd id="piHost">–</dd>
+        <dt>Last run</dt><dd id="piLast">–</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h2>Pi scripts <span class="spacer"></span><button id="btnScripts" class="small" style="padding:2px 8px" title="Ask the Pi to rescan its script folder">↻</button></h2>
+      <div class="small muted" style="margin-bottom:8px">Folder on the Pi: <code id="piDir">/opt/meshaddon/scripts</code>. Any executable file there can be run from the mesh with <span class="rulecmd">!run &lt;name&gt; [args]</span>, and <span class="rulecmd">!scripts</span> lists them.</div>
+      <table><tbody id="scriptTbl"></tbody></table>
+    </div>
+  </section>
+
+  <!-- CENTER -->
+  <section class="stack">
+    <div class="card">
+      <h2>Live topology &amp; traffic <span class="spacer"></span><span class="small muted" id="pktRate">0 pkt/min</span></h2>
+      <svg id="topo" viewBox="0 0 900 440" aria-label="Topology diagram"></svg>
+      <div class="legend">
+        <span><i style="background:var(--flow-rf)"></i>LoRa mesh packets</span>
+        <span><i style="background:var(--flow-tele)"></i>Sensor readings / telemetry</span>
+        <span><i style="background:var(--flow-cmd)"></i>Channel commands</span>
+        <span><i style="background:var(--flow-pi)"></i>Pi request / reply</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="active" data-tab="tBoard">GPIO &amp; sensors</button>
+        <button data-tab="tSensors">Readings</button>
+        <button data-tab="tRules">Commands</button>
+        <span class="spacer"></span>
+        <button id="btnAddSensor" class="primary" style="margin:0 0 4px;padding:4px 12px">＋ Add sensor</button>
+      </div>
+
+      <div id="tBoard" class="tab active">
+        <svg id="board" viewBox="0 0 760 250" aria-label="Heltec V4 pin header"></svg>
+        <p class="small muted" style="margin:6px 0 0">Click <b>＋ Add sensor</b>, a sensor type below, or a <b>free</b> (green) pin to start the setup guide. Click an assigned pin to edit or remove it. Grey pins are used by LoRa, OLED, GPS or USB.</p>
+        <div class="palette" id="palette"></div>
+      </div>
+
+      <div id="tSensors" class="tab">
+        <table>
+          <thead><tr><th>Slot</th><th>Label</th><th>Type</th><th>GPIO</th><th>LPP ch</th><th style="text-align:right">Value</th><th>Trend</th></tr></thead>
+          <tbody id="sensTbl"></tbody>
+        </table>
+        <p class="small muted">Values are reported in MeshCore telemetry (CayenneLPP) and show up in the app and in Home Assistant's MeshCore integration.</p>
+      </div>
+
+      <div id="tRules" class="tab">
+        <table>
+          <thead><tr><th>Command</th><th>Answered by</th><th>Action</th><th></th></tr></thead>
+          <tbody id="ruleTbl"></tbody>
+        </table>
+        <div class="row" style="margin-top:8px">
+          <input id="ruleCmd" placeholder="command, e.g. door">
+          <select id="ruleAct"></select>
+          <button id="ruleAdd">Add</button>
+        </div>
+        <p class="small muted" style="margin:6px 0 0">The Heltec answers every rule itself, using the sensor values it has cached. Only <span class="rulecmd">!run</span> goes to the Pi.</p>
+        <div class="row" style="margin-top:10px">
+          <input id="simMsg" placeholder="Test as channel message: !status, !scripts, !run uptime">
+          <button id="simSend">Simulate</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="stack">
+    <div class="card">
+      <h2>Serial console</h2>
+      <div id="log"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="cliIn" placeholder="CLI command, e.g. get radio" disabled>
+        <button id="cliSend" disabled>Send</button>
+      </div>
+      <label class="small muted"><input type="checkbox" id="showEvt" checked> show events</label>
+    </div>
+    <div class="card">
+      <h2>Pending changes</h2>
+      <div id="pending" class="small" style="font-family:var(--mono);white-space:pre-wrap;color:var(--muted)">none</div>
+    </div>
+
+    <div class="card" id="fwCard">
+      <h2>Firmware &amp; updates <span class="spacer"></span><button id="fwCheck" style="padding:2px 10px;text-transform:none;letter-spacing:0">Check now</button></h2>
+      <div class="form"><label class="small muted">Board</label><select id="fwBoard"></select></div>
+      <div id="fwStatus" style="margin-top:10px"></div>
+      <details class="hw" id="fwNotesWrap" style="margin-top:8px"><summary class="small">What's new</summary><div id="fwNotes" class="small fwnotes"></div></details>
+      <div id="fwDl" class="small" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="fwFlash" class="primary" disabled>Update now…</button>
+        <button id="fwBackup">⬇ Back up settings</button>
+        <label class="btnlike">⬆ Restore…<input type="file" id="fwRestore" accept=".json" hidden></label>
+      </div>
+      <div class="small muted" id="fwFoot" style="margin-top:8px"></div>
+    </div>
+  </section>
+</main>
+
+<!-- sensor edit dialog -->
+<div class="dlg" id="dlg">
+  <div class="card">
+    <h2 id="dlgTitle">Sensor</h2>
+    <div class="form" id="dlgForm"></div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button id="dlgDel" style="margin-right:auto">Remove</button>
+      <button id="dlgCancel">Cancel</button>
+      <button id="dlgOk" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- add-sensor wizard -->
+<div class="dlg" id="wiz">
+  <div class="card wizcard">
+    <h2><span id="wizTitle">Add sensor</span><span class="spacer"></span><span id="wizSteps" class="wizsteps"></span></h2>
+    <div id="wizBody"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button id="wizBack" style="margin-right:auto">← Back</button>
+      <button id="wizCancel">Cancel</button>
+      <button id="wizNext" class="primary">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- firmware flashing (esptool-js) -->
+<div class="dlg" id="flashDlg">
+  <div class="card wizcard" style="width:min(640px,100%) !important">
+    <h2>Install firmware <span class="spacer"></span><span class="small muted" style="text-transform:none;letter-spacing:0">Heltec V4 · USB</span></h2>
+    <div id="flashBody"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button id="flashClose">Close</button>
+      <button id="flashStart" class="primary">Start</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+ * Hardware model: Heltec WiFi LoRa 32 V4 (ESP32-S3)
+ * "used" pins come from MeshCore variants/heltec_v4/platformio.ini
+ * ============================================================ */
+const PINS = {
+  // gpio: {use, adc, note}
+  0:{use:"BOOT/PRG button"}, 1:{use:"VBAT read",adc:1}, 2:{use:"PA enable"}, 3:{adc:1,note:"strapping, ok after boot"},
+  4:{adc:1}, 5:{use:"PA CTX"}, 6:{adc:1}, 7:{use:"PA power"}, 8:{use:"LoRa NSS"}, 9:{use:"LoRa SCK"},
+  10:{use:"LoRa MOSI"}, 11:{use:"LoRa MISO"}, 12:{use:"LoRa RST"}, 13:{use:"LoRa BUSY"}, 14:{use:"LoRa DIO1"},
+  15:{adc:2}, 16:{adc:2}, 17:{use:"OLED SDA"}, 18:{use:"OLED SCL"}, 19:{use:"USB D-"}, 20:{use:"USB D+"},
+  21:{use:"OLED RST"}, 26:{use:"PSRAM"}, 33:{}, 34:{use:"GPS EN"}, 35:{use:"LED"}, 36:{use:"Vext EN"},
+  37:{use:"ADC ctrl"}, 38:{use:"GPS RX"}, 39:{use:"GPS TX"}, 40:{}, 41:{}, 42:{use:"GPS RST"},
+  45:{note:"strapping"}, 46:{use:"PA TX EN"}, 47:{}, 48:{},
+};
+const HEADER_L = ["GND","3V3","3V3",36,35,34,33,47,48,26,21,20,19,18,17,16,15,7,6,5]; // schematic order (left header)
+const HEADER_R = ["GND","5V","Ve","Ve",45,46,"RX","TX","RST",0,42,41,40,39,38,1,2,3,4,"GND"];
+
+/* Sensor catalogue. wires: sensor pin → Heltec pin ("GPIO" = the chosen pin, "GPIO2" = second pin).
+ * res: pull-up resistor between two sensor pins. optHelp documents each option.             */
+const SENSOR_TYPES = {
+  ds18b20:{name:"DS18B20",desc:"1-Wire temperature",icon:"🌡",measures:"Temperature −55…125 °C (±0.5 °C)",examples:"waterproof probe, TO-92",
+    lpp:"temperature",unit:"°C",pins:1,needs:"digital",defLabel:"Temperature",
+    wires:[{s:"VCC (red)",h:"3V3",c:"#dc2626"},{s:"DATA (yellow)",h:"GPIO",c:"#eab308"},{s:"GND (black)",h:"GND",c:"#6b7280"}],
+    res:{v:"4.7 kΩ",a:"DATA (yellow)",b:"VCC (red)",note:"Needed for bare probes. Breakout boards usually have it already."},
+    tips:["Long cables (10 m+) work. Lower the resistor to 2.2 kΩ if readings drop out."]},
+  dht22:{name:"DHT22 / AM2302",desc:"temp + humidity",icon:"💧",measures:"Temperature + relative humidity",examples:"DHT22 module, AM2302",
+    lpp:"temperature+humidity",unit:"°C/%",pins:1,needs:"digital",defLabel:"Climate",
+    wires:[{s:"+ / VCC",h:"3V3",c:"#dc2626"},{s:"OUT / DATA",h:"GPIO",c:"#eab308"},{s:"− / GND",h:"GND",c:"#6b7280"}],
+    res:{v:"10 kΩ",a:"OUT / DATA",b:"+ / VCC",note:"Only for the bare 4-pin sensor. 3-pin modules have it already."},
+    tips:["Read at most every 2 s; MeshAddon polls every 5 s.","Keep the cable under ~5 m."]},
+  analog:{name:"Analog in",desc:"0–3.1 V, scaled",icon:"〰",measures:"A voltage, scaled to anything (battery, level, light …)",examples:"voltage divider, LDR, soil probe",
+    lpp:"analog",unit:"V",pins:1,needs:"adc",defLabel:"Voltage",opts:{scale:1,offset:0},
+    optHelp:{scale:"Multiply the measured volts. For a 100 k + 10 k divider (0–30 V input), use 11.",offset:"Added after scaling."},
+    wires:[{s:"Signal",h:"GPIO",c:"#0ea5e9"},{s:"GND",h:"GND",c:"#6b7280"}],
+    tips:["Never above 3.1 V on the pin; use a voltage divider for higher voltages.","Only GPIO 3, 4, 6, 15 and 16 have an ADC."]},
+  digin:{name:"Digital in",desc:"door, float switch",icon:"🚪",measures:"Open/closed contact",examples:"reed switch, float switch, push button",
+    lpp:"digital_input",unit:"0/1",pins:1,needs:"digital",defLabel:"Door",opts:{pull:"up",invert:0},
+    optHelp:{pull:"up = internal pull-up (switch to GND). none = external circuit drives the pin.",invert:"1 = report closed as 1 when the pin is LOW (normal for switches to GND)."},
+    wires:[{s:"Contact A",h:"GPIO",c:"#0ea5e9"},{s:"Contact B",h:"GND",c:"#6b7280"}],
+    tips:["No resistor needed: the internal pull-up is used.","Polarity of a reed switch doesn't matter."]},
+  counter:{name:"Pulse counter",desc:"rain/water/power meter",icon:"🔁",measures:"Counts pulses, e.g. rain gauge, water or power meter",examples:"tipping-bucket rain gauge, S0 meter output",
+    lpp:"generic",unit:"pulses",pins:1,needs:"digital",defLabel:"Rain",opts:{per:1},
+    optHelp:{per:"Value per pulse: 0.2794 for a typical rain gauge (mm), 1 for a 1 L/pulse water meter."},
+    wires:[{s:"Pulse / S0+",h:"GPIO",c:"#0ea5e9"},{s:"GND / S0−",h:"GND",c:"#6b7280"}],
+    tips:["Pulses are counted with an interrupt and debounced (5 ms)."]},
+  relay:{name:"Relay / output",desc:"switch via channel",icon:"🔌",measures:"Switches something on/off from the mesh",examples:"1-channel relay module, SSR",
+    lpp:"digital_output",unit:"on/off",pins:1,needs:"digital",defLabel:"Relay",opts:{invert:0,pulse_ms:0},
+    optHelp:{invert:"1 for active-LOW modules (most cheap blue relay boards).",pulse_ms:"0 = stays on/off. >0 = turns on for this many ms, then off (garage-door button)."},
+    wires:[{s:"VCC",h:"5V",c:"#dc2626"},{s:"IN",h:"GPIO",c:"#f97316"},{s:"GND",h:"GND",c:"#6b7280"}],
+    tips:["Use a relay MODULE (with transistor/optocoupler). Never connect a bare relay coil to a GPIO.","Mains voltage: use a certified enclosure, or have an electrician do it."]},
+  pir:{name:"PIR motion",desc:"HC-SR501, AM312",icon:"🏃",measures:"Motion (people/animals)",examples:"HC-SR501 (5 V), AM312 (3.3 V)",
+    lpp:"presence",unit:"0/1",pins:1,needs:"digital",defLabel:"Motion",
+    wires:[{s:"VCC",h:"5V",c:"#dc2626"},{s:"OUT",h:"GPIO",c:"#0ea5e9"},{s:"GND",h:"GND",c:"#6b7280"}],
+    tips:["The HC-SR501 needs 5 V but outputs 3.3 V, which is safe for the Heltec.","The AM312 runs on 3V3: move its VCC to 3V3."]},
+  i2c:{name:"I²C sensor",desc:"BME280, SHT4x, INA219 …",icon:"🧩",measures:"Auto-detected: temperature, humidity, pressure, current, distance …",examples:"BME280, BMP280, SHT4x, SHTC3, AHT20, INA219/226/260, VL53L0X, MLX90614",
+    lpp:"auto",unit:"",pins:2,needs:"digital",defLabel:"Environment",
+    wires:[{s:"VIN / VCC",h:"3V3",c:"#dc2626"},{s:"GND",h:"GND",c:"#6b7280"},{s:"SDA",h:"GPIO",c:"#2563eb"},{s:"SCL",h:"GPIO2",c:"#16a34a"}],
+    tips:["Several I²C sensors can share the same two wires.","GPIO3 = SDA and GPIO4 = SCL, same as MeshCore's official Heltec V4 sensor build."]},
+};
+const I2C_KNOWN = {"0x76":"BME280 / BMP280","0x77":"BME280 / BMP280 / BME680","0x44":"SHT4x / SHT3x","0x70":"SHTC3","0x38":"AHT10/20","0x40":"INA219 / INA226 / INA260","0x41":"INA219 / INA3221","0x29":"VL53L0X","0x5a":"MLX90614","0x5c":"LPS22HB"};
+
+/* ============================================================
+ * State
+ * ============================================================ */
+// Device-derived state. The page starts EMPTY: everything here comes from the connected Heltec
+// ("addon dump") or, in demo mode, from demoDump(). Disconnect resets to this.
+const freshState = () => ({
+  dev:{}, addon:false,
+  slots:[],                         // {slot, type, pin, pin2, label, ch, opts, value, hist[]}
+  rules:[],                         // user rules, answered by the Heltec. Built-in: !scripts, !run (→ Pi)
+  scripts:[],                       // [{name, desc}] reported by the Pi
+  pi:{en:0, link:"uart", tx:47, rx:48, baud:115200, state:"–", host:"–"},
+  chan:{name:"", key:"", prefix:"!", allow:""},
+});
+const state = { mode:"off", pending:new Map(), selType:null, pktTimes:[], ...freshState() };
+function resetState(){
+  Object.assign(state, freshState()); state.pending.clear(); state.pktTimes = [];
+  ["#piState","#piHost","#piLast"].forEach(id=>$(id).textContent = "–");
+  $("#piDir").textContent = "/opt/meshaddon/scripts";
+}
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ============================================================
+ * Log
+ * ============================================================ */
+function log(cls, text){
+  if (cls==="evt" && !$("#showEvt").checked) return;
+  const el = $("#log"), line = document.createElement("div");
+  line.className = cls; line.textContent = (cls==="tx"?"› ":"") + text;
+  el.appendChild(line);
+  while (el.childNodes.length > 500) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ============================================================
+ * Transport: Web Serial (MeshCore repeater text CLI, CR-terminated)
+ * Replies are lines "  -> reply". MeshAddon build also emits "EVT {json}".
+ * ============================================================ */
+const serial = {
+  port:null, reader:null, writer:null, buf:"", waiters:[],
+  async open(port){
+    this.port = port || await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});
+    this.lastPort = this.port;
+    await this.port.open({baudRate:115200});
+    // ESP32-S3 native USB: avoid DTR/RTS reset on open
+    try { await this.port.setSignals({dataTerminalReady:false, requestToSend:false}); } catch(e){}
+    this.writer = this.port.writable.getWriter();
+    this.readLoop();
+  },
+  async readLoop(){
+    const dec = new TextDecoder();
+    while (this.port && this.port.readable){
+      this.reader = this.port.readable.getReader();
+      try{
+        for(;;){
+          const {value, done} = await this.reader.read();
+          if (done) break;
+          this.buf += dec.decode(value);
+          let i;
+          while ((i = this.buf.search(/[\r\n]/)) >= 0){
+            const line = this.buf.slice(0,i); this.buf = this.buf.slice(i+1);
+            if (line.trim()) onLine(line);
+          }
+        }
+      } catch(e){ log("err","serial: "+e.message); }
+      finally { this.reader.releaseLock(); }
+      break;
+    }
+  },
+  async send(cmd){
+    log("tx", cmd);
+    await this.writer.write(new TextEncoder().encode(cmd+"\r"));
+  },
+  // send and wait for the next "-> " reply
+  cmd(cmd, timeout=2500){
+    return new Promise(async (res) => {
+      const t = setTimeout(()=>{ this.waiters = this.waiters.filter(w=>w!==w0); res(null); }, timeout);
+      const w0 = r => { clearTimeout(t); res(r); };
+      this.waiters.push(w0);
+      await this.send(cmd);
+    });
+  },
+  async close(){
+    try{ await this.reader?.cancel(); }catch(e){}
+    try{ this.writer?.releaseLock(); }catch(e){}
+    try{ await this.port?.close(); }catch(e){}
+    this.port = null;
+  }
+};
+
+function onLine(line){
+  serial.sawOutput = true;
+  if (/Repeater ID:|MeshAddon .* ready/.test(line)) serial.booted = true;
+  if (line.startsWith("EVT ")){
+    try { handleEvent(JSON.parse(line.slice(4))); } catch(e){ log("err","bad EVT "+line); }
+    return;
+  }
+  if (/DEBUG: RadioLibWrapper: noise_floor/.test(line)) return;
+  const m = line.match(/->\s?(.*)$/);
+  if (m){
+    log("rx", m[1]);
+    const w = serial.waiters.shift(); if (w) w(m[1].trim());
+  } else log("evt", line);
+}
+
+/* ============================================================
+ * Demo transport: simulates a MeshAddon repeater + Pi
+ * ============================================================ */
+const demo = {
+  timers:[],
+  cfg:{"name":"garage-node","radio":"869.618,62.5,8,8","ver":"v1.13.0-addon0.1 (Build: 23 Nov 2026)"},
+  start(){
+    this.timers.push(setInterval(()=>{                      // mesh traffic
+      const n = 1 + Math.floor(Math.random()*2);
+      for (let i=0;i<n;i++) setTimeout(()=>handleEvent({t:"rx",type:["ADVERT","TXT","GRP_TXT","PATH","ACK"][Math.floor(Math.random()*5)],snr:+(Math.random()*12-2).toFixed(1),rssi:-60-Math.floor(Math.random()*50),fwd:Math.random()<.6}), i*450);
+    }, 1800));
+    this.timers.push(setInterval(()=>{                      // sensor readings
+      for (const s of state.slots){
+        const v = fakeValue(s);
+        handleEvent({t:"sensor",slot:s.slot,v});
+      }
+    }, 3000));
+    this.timers.push(setInterval(()=>{                      // occasional channel command from mesh
+      if (Math.random()<.5) return;
+      const pool = state.rules.map(r=>r.cmd).concat(["scripts","run uptime","run cputemp"]);
+      handleEvent({t:"chan",ch:state.chan.name,from:["alice","bob","field-node"][Math.floor(Math.random()*3)],text:state.chan.prefix+pool[Math.floor(Math.random()*pool.length)]});
+    }, 9000));
+    handleEvent({t:"pi",state:"up",host:"pizero-relay (Linux 6.12, aarch64)",dir:"/opt/meshaddon/scripts"});
+    handleEvent({t:"scripts",list:DEMO_SCRIPTS.map(({name,desc})=>({name,desc}))});
+  },
+  stop(){ this.timers.forEach(clearInterval); this.timers=[]; },
+  cmd(c){
+    log("tx", c);
+    let r = "OK";
+    if (c==="ver") r = this.cfg.ver;
+    else if (c==="get name") r = "> "+this.cfg.name;
+    else if (c==="get radio") r = "> "+this.cfg.radio;
+    else if (c==="get role") r = "> repeater";
+    else if (c.startsWith("get ")) r = ({lat:"> 59.9623",lon:"> 11.0421",tx:"> 22","advert.interval":"> 0","flood.advert.interval":"> 12",repeat:"> on",af:"> 1.0"})[c.slice(4)] ?? "Error: unknown config";
+    else if (c==="addon info") r = "addon 0.1 slots=8 pi=1 chan=1";
+    else if (c==="addon dump") r = JSON.stringify(demoDump());
+    else if (c.startsWith("addon pi run ")){ const [name,...args] = c.slice(13).trim().split(/\s+/); setTimeout(()=>handleEvent({t:"chan",ch:"(USB)",from:"configurator",text:state.chan.prefix+"run "+name+(args.length?" "+args.join(" "):"")}),50); }
+    else if (c.startsWith("addon i2c scan")) r = "found 0x76";
+    else if (c.startsWith("addon test ")){
+      const ty = c.slice(11).split(",")[0];
+      r = {ds18b20:"21.62 °C",dht22:"21.4 °C 38 %",analog:"1.642 V (raw 2038)",digin:"pin HIGH → 0 (open)",counter:"0 pulses in 3 s",relay:"clicked 500 ms",pir:"0 (no motion)"}[ty] || "OK";
+    }
+    else if (c==="addon pi list") setTimeout(()=>handleEvent({t:"scripts",list:DEMO_SCRIPTS.map(({name,desc})=>({name,desc}))}),400);
+    else if (c.startsWith("addon ")) r = "OK";
+    else if (c==="stats-core") r = '{"battery_mv":4012,"uptime_secs":'+Math.floor(performance.now()/1000+86000)+'}';
+    setTimeout(()=>log("rx", r), 60);
+    return Promise.resolve(r);
+  }
+};
+function demoDump(){
+  return {
+    slots:[
+      {slot:1,type:"ds18b20",pin:6,label:"Garage temp",ch:1},
+      {slot:2,type:"relay",pin:47,label:"Gate relay",ch:2,opts:{invert:0,pulse_ms:800}},
+      {slot:3,type:"digin",pin:33,label:"Gate closed",ch:3,opts:{pull:"up",invert:1}},
+      {slot:4,type:"i2c",pin:3,pin2:4,label:"BME280",ch:4},
+    ],
+    chan:{name:"#relay",key:"",prefix:"!",allow:""},
+    pi:{en:1,tx:40,rx:41,baud:115200},
+    rules:[{cmd:"status",act:"status"},{cmd:"get devid relay status",act:"status"},{cmd:"temp",act:"slot:1"},
+           {cmd:"port",act:"relay:2=t"},{cmd:"door",act:"slot:3"}],
+  };
+}
+const DEMO_SCRIPTS = [
+  {name:"uptime", desc:"Pi uptime and load", run:()=>"pizero-relay up 3 days, 4 hours load 0.08"},
+  {name:"cputemp", desc:"Pi CPU temperature", run:()=>"cpu 41C"},
+  {name:"wake-pc", desc:"Wake-on-LAN for the office PC", run:a=>`WOL sent to ${a[0]||"office"}`},
+  {name:"backup-ha", desc:"Trigger Home Assistant backup", run:()=>"backup started (HA 2026.11.2)"},
+];
+function fakeValue(s){
+  const t = Date.now()/60000;
+  switch(s.type){
+    case "ds18b20": return +(6.5 + Math.sin(t)*1.2 + Math.random()*.2).toFixed(2);
+    case "dht22": return +(21 + Math.sin(t)*.8).toFixed(1);
+    case "analog": return +(1.6 + Math.sin(t*3)*.4).toFixed(3);
+    case "digin": case "pir": return Math.random()<.85 ? 1 : 0;
+    case "counter": return (s.value||0) + Math.floor(Math.random()*3);
+    case "relay": return s.value ?? 0;
+    case "i2c": return +(1008 + Math.sin(t)*3).toFixed(1);
+  }
+  return 0;
+}
+
+/* ============================================================
+ * Unified command API
+ * ============================================================ */
+async function devCmd(c){
+  if (state.mode==="demo") return demo.cmd(c);
+  if (state.mode==="serial") return serial.cmd(c);
+  return null;
+}
+
+async function readDevice(){
+  if (state.mode!=="demo" || !state.dev.name) Object.assign(state, freshState());
+  const strip = r => r ? r.replace(/^>\s*/,"") : "–";
+  state.dev.ver   = strip(await devCmd("ver"));
+  state.dev.name  = strip(await devCmd("get name"));
+  state.dev.radio = strip(await devCmd("get radio"));
+  const info = await devCmd("addon info");
+  state.addon = !!(info && info.startsWith("addon"));
+  state.dev.role = state.addon ? "repeater + MeshAddon" : "repeater";
+  try { const s = JSON.parse(await devCmd("stats-core")); state.dev.batt = (s.battery_mv/1000).toFixed(2)+" V"; state.dev.up = fmtUp(s.uptime_secs); } catch(e){}
+  if (state.addon){
+    try {
+      const d = JSON.parse(await devCmd("addon dump", 4000));
+      state.slots = (d.slots||[]).map(s=>({...s, hist:[], value:null}));
+      Object.assign(state.chan, d.chan||{});
+      Object.assign(state.pi, d.pi||{});
+      if (Array.isArray(d.rules)) state.rules = d.rules;
+      if (Array.isArray(d.scripts)) state.scripts = d.scripts;
+    } catch(e){ log("err","could not parse addon dump"); }
+  }
+  state.pending.clear();
+  renderAll(); fwRender();
+}
+function fmtUp(s){ const d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60); return `${d}d ${h}h ${m}m`; }
+
+/* Pending changes -> CLI commands (MeshAddon CLI, see docs/PROTOCOL.md) */
+function stage(key, cmd){ state.pending.set(key, cmd); renderPending(); }
+async function applyPending(){
+  for (const [k,c] of state.pending){ const r = await devCmd(c); if (r===null) { log("err","no reply for: "+c); return; } }
+  await devCmd("addon save");
+  state.pending.clear(); renderPending();
+  log("evt","changes saved to flash");
+}
+function slotCmd(s){
+  const o = s.opts ? Object.entries(s.opts).map(([k,v])=>`${k}=${v}`).join(";") : "";
+  return `addon slot ${s.slot} ${s.type},${s.pin}${s.pin2!=null?"+"+s.pin2:""},${s.ch},${s.label.replace(/,/g," ")}${o?","+o:""}`;
+}
+
+/* ============================================================
+ * Events -> animation + tables
+ * ============================================================ */
+function handleEvent(e){
+  switch(e.t){
+    case "rx":
+      state.pktTimes.push(Date.now());
+      log("evt", `rx ${e.type} snr=${e.snr} rssi=${e.rssi}${e.fwd?" → fwd":""}`);
+      flow("mesh","node","rf");
+      if (e.fwd) setTimeout(()=>flow("node","mesh","rf"), 600);
+      break;
+    case "sensor": {
+      const s = state.slots.find(x=>x.slot===e.slot); if (!s) return;
+      s.value = e.v; s.hist.push(typeof e.v==="number"?e.v:0); if (s.hist.length>40) s.hist.shift();
+      flow("s"+s.slot,"node","tele");
+      renderReadings(); updateNodeValues();
+      break; }
+    case "tele":
+      log("evt", `telemetry request from ${e.from||"?"}`);
+      flow("mesh","node","rf"); setTimeout(()=>flow("node","mesh","tele"), 500);
+      break;
+    case "chan": {
+      log("cmd", `${e.ch} <${e.from}> ${e.text}`);
+      flow("mesh","node","cmd");
+      const text = e.text.slice(state.chan.prefix.length).trim();
+      const [word, ...args] = text.split(/\s+/);
+      // In real mode the firmware does all of this and reports results with "reply" / "pireply" events.
+      if (word==="scripts"){                                   // Heltec answers from cached list
+        if (state.mode==="demo") meshReply(state.scripts.length ? "scripts: "+state.scripts.map(s=>s.name).join(", ") : "no Pi scripts");
+        break;
+      }
+      if (word==="run"){                                       // only thing that goes to the Pi
+        if (!args.length){ if (state.mode==="demo") meshReply("usage: !run <script> [args]"); break; }
+        if (state.pi.state!=="up"){ if (state.mode==="demo") meshReply("Pi link is down"); break; }
+        $("#piLast").textContent = args.join(" ");
+        setTimeout(()=>flow("node","pi","pi"), 600);
+        if (state.mode==="demo"){
+          const sc = DEMO_SCRIPTS.find(s=>s.name===args[0]);
+          setTimeout(()=>handleEvent({t:"pireply",script:args[0],text: sc ? sc.run(args.slice(1)) : `no script '${args[0]}'. Try !scripts`}), 1500);
+        }
+        break;
+      }
+      const r = state.rules.find(r=>r.cmd===text);
+      if (!r){ setTimeout(()=>flow("node","mesh","cmd"), 700); break; }   // unknown: ignored, no reply
+      if (state.mode==="demo") meshReply(fwAction(r.act));
+      break; }
+    case "reply":                                              // Heltec replied on the channel
+      log("cmd", `${state.chan.name} <${state.dev.name||"node"}> ${e.text}`);
+      setTimeout(()=>flow("node","mesh","cmd"), 500);
+      break;
+    case "pireply":
+      log("pi", `pi → ${e.text}`);
+      flow("pi","node","pi");
+      if (state.mode==="demo") setTimeout(()=>handleEvent({t:"reply",text:e.text}), 650);   // real firmware sends its own "reply" event
+      break;
+    case "scripts":
+      state.scripts = e.list||[]; renderScripts(); drawTopo();
+      break;
+    case "pi":
+      state.pi.state = e.state; if (e.host) state.pi.host = e.host; if (e.dir) $("#piDir").textContent = e.dir;
+      $("#piState").innerHTML = e.state==="up" ? `<span style="color:var(--ok)">● up</span>` : `<span style="color:var(--err)">● ${esc(e.state)}</span>`;
+      $("#piHost").textContent = state.pi.host;
+      drawTopo(); renderScripts();
+      break;
+  }
+}
+/* Built-in Heltec actions (mirrors what the firmware will do):
+ *   status         name, battery, uptime + every slot value
+ *   slot:N         one slot's value
+ *   relay:N=1|0|t  set / clear / toggle a relay slot, then report it          */
+const FW_ACTIONS = () => [
+  {v:"status", l:"status: node + all sensors"},
+  ...state.slots.map(s=>({v:"slot:"+s.slot, l:`read: ${s.label}`})),
+  ...state.slots.filter(s=>s.type==="relay").flatMap(s=>[
+    {v:`relay:${s.slot}=1`, l:`${s.label}: on`}, {v:`relay:${s.slot}=0`, l:`${s.label}: off`}, {v:`relay:${s.slot}=t`, l:`${s.label}: toggle`}]),
+];
+function fwAction(act){
+  const name = state.dev.name||"node";
+  if (act==="status")
+    return `${name} bat ${state.dev.batt||"?"} up ${state.dev.up||"?"}` + state.slots.map(s=>` | ${s.label} ${fmtVal(s)}`).join("");
+  let m = act.match(/^slot:(\d+)$/);
+  if (m){ const s = state.slots.find(x=>x.slot===+m[1]); return s ? `${s.label}: ${fmtVal(s)}` : `slot ${m[1]} empty`; }
+  m = act.match(/^relay:(\d+)=([01t])$/);
+  if (m){
+    const s = state.slots.find(x=>x.slot===+m[1]&&x.type==="relay"); if (!s) return `slot ${m[1]} is not a relay`;
+    s.value = m[2]==="t" ? (s.value?0:1) : +m[2];
+    setTimeout(()=>flow("node","s"+s.slot,"cmd"),400); renderReadings(); updateNodeValues();
+    return `${s.label}: ${fmtVal(s)}`;
+  }
+  return "unknown action "+act;
+}
+function meshReply(text){ setTimeout(()=>handleEvent({t:"reply",text}), 700); }
+
+/* ============================================================
+ * Topology SVG
+ * ============================================================ */
+const NS = "http://www.w3.org/2000/svg";
+const topo = $("#topo");
+let nodes = {};
+function svg(tag, attrs, parent){ const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+function drawTopo(){
+  topo.innerHTML = "";
+  const defs = svg("defs",{},topo);
+  const g = svg("filter",{id:"glow"},defs); svg("feGaussianBlur",{stdDeviation:"2.5"},g);
+  nodes = {
+    mesh:{x:120,y:200,label:"MeshCore mesh",sub:"LoRa 869.618 MHz",kind:"mesh"},
+    node:{x:450,y:200,label:state.dev.name||"Heltec V4",sub:state.addon||state.mode==="demo"?"repeater + MeshAddon":"repeater",kind:"node"},
+    pi:{x:770,y:90,label:"Raspberry Pi Zero 2 W",sub:!state.pi.en?"disabled": state.pi.link==="usb" ? "USB: Pi USB port ↔ Heltec USB-C" : `UART · Heltec ${state.pi.tx}/${state.pi.rx} ↔ Pi 15/14`,kind:"pi"},
+  };
+  const sl = state.slots, n = sl.length;
+  // sensors in a grid under the node (max 4 per row)
+  const cols = Math.min(Math.max(n,1),4);
+  sl.forEach((s,i)=>{ const c=i%cols, r=Math.floor(i/cols); nodes["s"+s.slot] = {x: 260 + (c+.5)*(610/cols), y: 330 + r*62, kind:"sensor", s}; });
+
+  const edgeLayer = svg("g",{},topo);
+  const edge = (a,b,cls,dash) => {
+    const A=nodes[a], B=nodes[b]; if(!A||!B) return;
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2 - (a==="mesh"?0:20);
+    const p = svg("path",{d:`M${A.x},${A.y} Q${mx},${my} ${B.x},${B.y}`,fill:"none",stroke:"var(--line)","stroke-width":2.5,"stroke-dasharray":dash||"",id:`e-${a}-${b}`},edgeLayer);
+    return p;
+  };
+  edge("mesh","node",null,"");
+  if (state.pi.en) edge("node","pi",null, state.pi.state==="up"?"":"6 5");
+  sl.forEach(s=>edge("node","s"+s.slot,null,"3 4"));
+
+  // mesh cloud
+  const M = nodes.mesh, mg = svg("g",{},topo);
+  [[-40,-10,34],[0,-25,40],[40,-8,34],[0,15,42]].forEach(([dx,dy,r])=>svg("circle",{cx:M.x+dx,cy:M.y+dy,r,fill:"var(--panel)",stroke:"var(--flow-rf)","stroke-width":1.5,opacity:.9},mg));
+  svg("circle",{cx:M.x,cy:M.y,r:46,fill:"var(--panel)"},mg);
+  for (let i=0;i<7;i++){ const a=i/7*Math.PI*2; svg("circle",{cx:M.x+Math.cos(a)*30,cy:M.y+Math.sin(a)*22,r:4,fill:"var(--flow-rf)",class:"dot-live",style:`animation-delay:${i*.2}s`},mg); }
+  txt(M.x, M.y+80, M.label, 13, "600"); txt(M.x, M.y+96, M.sub, 11, "400", "var(--muted)");
+
+  // heltec node
+  const N = nodes.node, ng = svg("g",{style:"cursor:pointer"},topo);
+  svg("rect",{x:N.x-70,y:N.y-48,width:140,height:96,rx:10,fill:"var(--board)",stroke:"var(--accent)","stroke-width":2},ng);
+  svg("rect",{x:N.x-50,y:N.y-34,width:60,height:34,rx:3,fill:"#0a0f14",stroke:"#4a5a6a"},ng);
+  svg("text",{x:N.x-20,y:N.y-13,"text-anchor":"middle","font-size":9,fill:"#7dd3fc","font-family":"var(--mono)"},ng).textContent = "OLED";
+  svg("rect",{x:N.x+20,y:N.y-30,width:34,height:26,rx:2,fill:"#2b3a47"},ng);
+  svg("text",{x:N.x+37,y:N.y-13,"text-anchor":"middle","font-size":8,fill:"#cbd5e1"},ng).textContent = "S3";
+  svg("line",{x1:N.x+60,y1:N.y-48,x2:N.x+60,y2:N.y-90,stroke:"var(--muted)","stroke-width":3},ng);
+  svg("circle",{cx:N.x+60,cy:N.y-92,r:4,fill:"var(--muted)"},ng);
+  svg("text",{x:N.x,y:N.y+18,"text-anchor":"middle","font-size":12,"font-weight":600,fill:"var(--board-ink)"},ng).textContent = N.label;
+  svg("text",{x:N.x,y:N.y+31,"text-anchor":"middle","font-size":9.5,fill:"var(--board-ink)",opacity:.85},ng).textContent = "Heltec WiFi LoRa 32 V4";
+  svg("text",{x:N.x,y:N.y+43,"text-anchor":"middle","font-size":9,fill:"var(--board-ink)",opacity:.65},ng).textContent = N.sub;
+  svg("title",{},ng).textContent = "Heltec WiFi LoRa 32 V4 · ESP32-S3 + SX1262 · USB-C to this browser";
+  svg("text",{x:N.x-8,y:N.y+64,"text-anchor":"middle","font-size":9.5,fill:"var(--muted)"},topo).textContent = state.mode==="serial" ? "⇣ USB-C → this browser" : state.mode==="demo" ? "⇣ USB-C → this browser (demo)" : "";
+  ng.addEventListener("click",()=>switchTab("tBoard"));
+
+  // pi
+  if (state.pi.en){
+    const P = nodes.pi, pg = svg("g",{style:"cursor:pointer"},topo);
+    svg("rect",{x:P.x-78,y:P.y-30,width:156,height:60,rx:8,fill:"var(--panel)",stroke:"var(--pi)","stroke-width":2},pg);
+    svg("title",{},pg).textContent = state.pi.link==="usb" ? "Connected with a USB cable" : `UART ${state.pi.baud} 8N1, 3.3 V: Heltec GPIO${state.pi.tx} → Pi GPIO15/RXD (pin 10), Heltec GPIO${state.pi.rx} ← Pi GPIO14/TXD (pin 8), GND ↔ pin 6`;
+    // label on the link itself
+    const E = document.getElementById("e-node-pi");
+    if (E){ const m = E.getPointAtLength(E.getTotalLength()*.45); svg("text",{x:m.x,y:m.y-8,"text-anchor":"middle","font-size":9.5,fill:"var(--pi)"},topo).textContent = state.pi.link==="usb" ? "USB serial" : `UART ${state.pi.baud} · 3 wires`; }
+    for(let i=0;i<10;i++) svg("circle",{cx:P.x-50+i*11,cy:P.y-22,r:2,fill:"var(--pin)"},pg);
+    txt(P.x, P.y+2, P.label, 12, "600"); txt(P.x, P.y+18, P.sub, 10, "400", "var(--muted)");
+    const up = state.pi.state==="up";
+    svg("circle",{cx:P.x+52,cy:P.y+20,r:4,fill:up?"var(--ok)":"var(--err)",class:up?"dot-live":""},pg);
+    txt(P.x, P.y+48, state.scripts.length+" script(s): "+state.scripts.slice(0,3).map(s=>s.name).join(", ")+(state.scripts.length>3?" …":""), 10, "400", "var(--muted)");
+  }
+
+  // sensors
+  sl.forEach(s=>{
+    const S = nodes["s"+s.slot], t = SENSOR_TYPES[s.type]||{name:s.type}, sg = svg("g",{style:"cursor:pointer"},topo);
+    const col = s.type==="relay" ? "var(--accent2)" : "var(--flow-tele)";
+    svg("rect",{x:S.x-56,y:S.y-24,width:112,height:48,rx:8,fill:"var(--panel)",stroke:col,"stroke-width":1.6},sg);
+    txt(S.x, S.y-7, s.label, 11, "600");
+    const v = svg("text",{x:S.x,y:S.y+9,"text-anchor":"middle","font-size":11,"font-family":"var(--mono)",fill:col,id:"nv"+s.slot},sg); v.textContent = fmtVal(s);
+    txt(S.x, S.y+20, `${t.name} · GPIO${s.pin}${s.pin2!=null?"/"+s.pin2:""}`, 9, "400", "var(--muted)");
+    sg.addEventListener("click",()=>openSlot(s));
+  });
+  if (!sl.length) txt(640, 360, "No sensors yet: assign GPIO pins below ↓", 12, "400", "var(--muted)");
+  svg("g",{id:"flows"},topo);
+}
+function txt(x,y,s,size,weight,fill){ const t = svg("text",{x,y,"text-anchor":"middle","font-size":size,"font-weight":weight||400,fill:fill||"var(--ink)"},topo); t.textContent = s; return t; }
+function fmtVal(s){
+  if (s.value==null) return "…";
+  const t = SENSOR_TYPES[s.type];
+  if (s.type==="relay") return s.value ? "ON" : "OFF";
+  if (s.type==="digin") return s.value ? "closed" : "open";
+  if (s.type==="pir") return s.value ? "motion" : "idle";
+  if (s.type==="i2c") return s.value+" hPa";
+  return s.value + " " + (t?.unit||"");
+}
+function updateNodeValues(){ state.slots.forEach(s=>{ const e = document.getElementById("nv"+s.slot); if (e) e.textContent = fmtVal(s); }); }
+
+// animate a packet dot along an edge (either direction)
+function flow(a,b,kind){
+  let path = document.getElementById(`e-${a}-${b}`), rev = false;
+  if (!path){ path = document.getElementById(`e-${b}-${a}`); rev = true; }
+  if (!path) return;
+  const len = path.getTotalLength(), layer = document.getElementById("flows");
+  const color = {rf:"var(--flow-rf)",tele:"var(--flow-tele)",cmd:"var(--flow-cmd)",pi:"var(--flow-pi)"}[kind];
+  const dot = svg("circle",{r:5.5,fill:color,filter:"url(#glow)"},layer);
+  const core = svg("circle",{r:3.5,fill:color},layer);
+  path.setAttribute("stroke",color); path.setAttribute("stroke-opacity",.55);
+  const dur = 650, t0 = performance.now();
+  (function step(now){
+    const k = Math.min((now-t0)/dur,1), p = path.getPointAtLength((rev?1-k:k)*len);
+    dot.setAttribute("cx",p.x); dot.setAttribute("cy",p.y); core.setAttribute("cx",p.x); core.setAttribute("cy",p.y);
+    if (k<1) requestAnimationFrame(step); else { dot.remove(); core.remove(); path.setAttribute("stroke","var(--line)"); path.removeAttribute("stroke-opacity"); }
+  })(t0);
+}
+
+/* ============================================================
+ * Board / pin picker
+ * ============================================================ */
+function pinOwner(gpio){
+  const s = state.slots.find(s=>s.pin===gpio||s.pin2===gpio); if (s) return {slot:s};
+  if (state.pi.en && (gpio===+state.pi.tx||gpio===+state.pi.rx)) return {pi:true};
+  return null;
+}
+function drawBoard(){
+  const b = $("#board"); b.innerHTML = "";
+  const S = (t,a,p)=>svg(t,a,p||b);
+  S("rect",{x:140,y:40,width:480,height:170,rx:14,fill:"var(--board)"});
+  S("rect",{x:300,y:80,width:120,height:60,rx:4,fill:"#0a0f14",stroke:"#4a5a6a"});
+  S("text",{x:360,y:115,"text-anchor":"middle","font-size":12,fill:"#7dd3fc"}).textContent = "OLED";
+  S("rect",{x:440,y:85,width:60,height:50,rx:3,fill:"#2b3a47"});
+  S("text",{x:470,y:114,"text-anchor":"middle","font-size":10,fill:"#cbd5e1"}).textContent = "ESP32-S3";
+  S("rect",{x:540,y:90,width:50,height:40,rx:3,fill:"#3d4b58"});
+  S("text",{x:565,y:114,"text-anchor":"middle","font-size":9,fill:"#cbd5e1"}).textContent = "SX1262";
+  S("rect",{x:118,y:108,width:30,height:26,rx:3,fill:"#9aa4ae"});
+  S("text",{x:133,y:150,"text-anchor":"middle","font-size":9,fill:"var(--board-ink)"}).textContent = "USB-C";
+  S("rect",{x:618,y:112,width:22,height:18,rx:2,fill:"var(--pin)"});
+  S("text",{x:660,y:125,"font-size":9,fill:"var(--muted)"}).textContent = "LoRa ant";
+  const row = (list, y, labelY) => list.forEach((p,i)=>{
+    const x = 160 + i*23.5, gpio = typeof p==="number" ? p : null;
+    let fill = "var(--used)", stroke = "var(--line)", title = String(p);
+    if (gpio!==null){
+      const info = PINS[gpio]||{}, own = pinOwner(gpio);
+      if (own?.slot){ fill = own.slot.type==="relay"?"var(--accent2)":"var(--flow-tele)"; title = `GPIO${gpio}: ${own.slot.label}`; }
+      else if (own?.pi){ fill = "var(--pi)"; title = `GPIO${gpio}: Pi UART`; }
+      else if (!info.use){ fill = "var(--free)"; stroke = "var(--ok)"; title = `GPIO${gpio}: free${info.adc?" (ADC"+info.adc+")":""}${info.note?" – "+info.note:""}`; }
+      else title = `GPIO${gpio}: ${info.use}`;
+    } else if (p==="GND") fill = "#3a3f45"; else if (/3V3|5V|Ve/.test(p)) fill = "#7f1d1d";
+    const g = S("g",{style: gpio!==null && !(PINS[gpio]||{}).use ? "cursor:pointer":""});
+    const c = S("rect",{x:x-9,y:y-9,width:18,height:18,rx:4,fill,stroke,"stroke-width":1.5},g);
+    svg("title",{},g).textContent = title;
+    const t = S("text",{x,y:labelY,"text-anchor":"middle",class:"pinlabel"},g); t.textContent = p;
+    if (gpio!==null) g.addEventListener("click",()=>pinClick(gpio));
+  });
+  row(HEADER_L, 28, 14);
+  row(HEADER_R, 222, 244);
+}
+function pinClick(gpio){
+  const info = PINS[gpio]||{}, own = pinOwner(gpio);
+  if (own?.slot) return openSlot(own.slot);
+  if (own?.pi) return log("evt",`GPIO${gpio} is the Pi UART. Change it in “Raspberry Pi link”.`);
+  if (info.use) return log("evt",`GPIO${gpio} is used by ${info.use}`);
+  openWizard({type:state.selType, pin:gpio});
+}
+const nextSlot = () => { for (let i=1;i<=8;i++) if (!state.slots.some(s=>s.slot===i)) return i; return null; };
+const nextLpp  = () => { let c=10; while (state.slots.some(s=>s.ch===c)) c++; return c; };
+const freePins = () => Object.keys(PINS).map(Number).filter(g=>!PINS[g].use && !pinOwner(g));
+
+function renderPalette(){
+  const p = $("#palette"); p.innerHTML = "";
+  for (const [k,t] of Object.entries(SENSOR_TYPES)){
+    const c = document.createElement("div"); c.className = "chip"+(state.selType===k?" sel":""); c.draggable = true;
+    c.innerHTML = `<b>${t.icon} ${esc(t.name)}</b><small>${esc(t.desc)}</small>`;
+    c.onclick = ()=>openWizard({type:k});
+    p.appendChild(c);
+  }
+}
+
+/* ============================================================
+ * Add-sensor wizard: 1 choose → 2 connect → 3 name/settings → 4 test & save
+ * ============================================================ */
+let wz = null;
+const WZ_STEPS = ["Choose", "Connect", "Settings", "Test & save"];
+function suggestPins(type, want){
+  const t = SENSOR_TYPES[type], free = freePins();
+  if (t.pins===2){
+    if (free.includes(3) && free.includes(4)) return [3,4];
+    const f = free.filter(p=>p!==45); return [f[0], f[1]];
+  }
+  if (want!=null && free.includes(want) && (t.needs!=="adc" || PINS[want].adc)) return [want];
+  const pref = t.needs==="adc" ? [6,4,3,15,16] : [33,40,41,47,48,6,15,16,4,3,45];
+  return [pref.find(p=>free.includes(p) && (t.needs!=="adc"||PINS[p].adc))];
+}
+function openWizard({type, pin}={}){
+  if (nextSlot()==null) return log("err","All 8 sensor slots are in use. Remove one first.");
+  wz = {step: type?2:1, type:type||null, wantPin:pin, pin:null, pin2:null, label:"", opts:{}, ch:nextLpp(), test:null, writeNow:true};
+  if (type) wzSetType(type);
+  $("#wiz").classList.add("open"); renderWizard();
+}
+function wzSetType(k){
+  const t = SENSOR_TYPES[k], [p1,p2] = suggestPins(k, wz.wantPin);
+  wz.type = k; wz.pin = p1; wz.pin2 = t.pins===2 ? p2 : null; wz.opts = t.opts ? {...t.opts} : {};
+  const n = state.slots.filter(s=>s.type===k).length;
+  wz.label = t.defLabel + (n ? " "+(n+1) : ""); wz.test = null;
+}
+function renderWizard(){
+  const t = wz.type && SENSOR_TYPES[wz.type];
+  $("#wizSteps").innerHTML = WZ_STEPS.map((s,i)=>`<span class="${i+1===wz.step?"on":i+1<wz.step?"done":""}">${i+1}. ${s}</span>`).join("");
+  $("#wizTitle").textContent = t ? `Add sensor: ${t.name}` : "Add sensor";
+  $("#wizBack").style.visibility = wz.step>1 ? "visible" : "hidden";
+  $("#wizNext").textContent = wz.step===4 ? (wz.writeNow && state.mode!=="off" ? "Add & write to Heltec" : "Add sensor") : "Next →";
+  $("#wizNext").disabled = (wz.step===1 && !wz.type) || (wz.step===2 && (wz.pin==null || (t.pins===2 && (wz.pin2==null || wz.pin2===wz.pin))));
+  const B = $("#wizBody");
+  if (wz.step===1){
+    B.innerHTML = `<p class="small muted" style="margin:0 0 8px">What do you want to connect?</p><div class="wizgrid">${
+      Object.entries(SENSOR_TYPES).map(([k,s])=>`<button class="wiztype ${wz.type===k?"sel":""}" data-k="${k}">
+        <span class="ico">${s.icon}</span><b>${esc(s.name)}</b><span>${esc(s.measures)}</span><small>${esc(s.examples)}</small></button>`).join("")}</div>`;
+    B.querySelectorAll(".wiztype").forEach(b=>{
+      b.onclick = ()=>{ wzSetType(b.dataset.k); renderWizard(); };
+      b.ondblclick = ()=>{ wzSetType(b.dataset.k); wz.step=2; renderWizard(); };
+    });
+  }
+  else if (wz.step===2){
+    const free = freePins().filter(p => t.needs!=="adc" || PINS[p].adc);
+    const sel = (id,v,lbl)=>`<label class="small muted">${lbl}</label><select id="${id}">${free.map(p=>`<option value="${p}" ${p===v?"selected":""}>GPIO${p}${PINS[p].adc?" (ADC)":""}${PINS[p].note?" – "+PINS[p].note:""}</option>`).join("")}</select>`;
+    B.innerHTML = `<div class="wizcols">
+      <div>
+        <div class="form">${t.pins===2 ? sel("wzP1",wz.pin,"SDA pin")+sel("wzP2",wz.pin2,"SCL pin") : sel("wzP1",wz.pin,"Heltec pin")}</div>
+        <p class="small" style="margin:10px 0 4px"><b>You need</b></p>
+        <ul class="small wizlist">
+          <li>${esc(t.examples.split(",")[0])}</li>
+          <li>${t.wires.length} jumper wires (Dupont female for the Heltec header)</li>
+          ${t.res?`<li>${t.res.v} resistor: ${esc(t.res.note)}</li>`:""}
+        </ul>
+        <p class="small" style="margin:10px 0 4px"><b>Tips</b></p>
+        <ul class="small wizlist muted">${t.tips.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+      </div>
+      <div><svg id="wzWire" viewBox="0 0 330 ${60+t.wires.length*40}" style="width:100%;height:auto"></svg>
+        <p class="small muted" style="margin:4px 0 0">Unplug the Heltec while wiring.</p></div>
+    </div>
+    <p class="small muted" style="margin:10px 0 2px">Where on the board (highlighted in orange):</p>
+    <svg id="wzBoard" viewBox="0 0 760 250" style="width:100%;height:auto"></svg><div>
+    </div>`;
+    const upd = ()=>{ wz.pin = +$("#wzP1").value; if ($("#wzP2")) wz.pin2 = +$("#wzP2").value; drawSensorWiring(); renderWizardButtons(); highlightPins(); };
+    $("#wzP1").onchange = upd; if ($("#wzP2")) $("#wzP2").onchange = upd;
+    drawSensorWiring(); highlightPins();
+  }
+  else if (wz.step===3){
+    let h = `<div class="form">
+      <label class="small muted">Name</label><input id="wzLabel" value="${esc(wz.label)}" maxlength="20">`;
+    for (const [k,v] of Object.entries(wz.opts)){
+      const help = t.optHelp?.[k] || "";
+      const input = k==="pull" ? `<select data-wopt="${k}"><option ${v==="up"?"selected":""}>up</option><option ${v==="none"?"selected":""}>none</option></select>`
+                  : k==="invert" ? `<select data-wopt="${k}"><option value="0" ${!+v?"selected":""}>0 – normal</option><option value="1" ${+v?"selected":""}>1 – inverted</option></select>`
+                  : `<input data-wopt="${k}" value="${esc(v)}">`;
+      h += `<label class="small muted">${esc(k)}</label><div>${input}<div class="small muted" style="margin-top:2px">${esc(help)}</div></div>`;
+    }
+    h += `</div><details class="hw" style="margin-top:10px"><summary class="small">Advanced</summary>
+      <div class="form" style="margin-top:6px"><label class="small muted">LPP channel</label><div><input id="wzCh" type="number" min="1" max="99" value="${wz.ch}">
+      <div class="small muted" style="margin-top:2px">Telemetry channel number shown in the app/HA. Picked automatically.</div></div></div></details>
+      <p class="small muted">The name appears in <span class="rulecmd">!status</span> replies and in the topology view. Short names are best; replies are limited to ~140 characters.</p>`;
+    B.innerHTML = h;
+    $("#wzLabel").oninput = e=>{ wz.label = e.target.value; };
+    $("#wzCh").oninput = e=>{ wz.ch = +e.target.value; };
+    B.querySelectorAll("[data-wopt]").forEach(i=>i.onchange = ()=>{ wz.opts[i.dataset.wopt] = isNaN(+i.value)||i.value==="" ? i.value : +i.value; });
+  }
+  else if (wz.step===4){
+    const pins = t.pins===2 ? `SDA GPIO${wz.pin}, SCL GPIO${wz.pin2}` : `GPIO${wz.pin}`;
+    const can = state.mode!=="off";
+    B.innerHTML = `<dl class="kv">
+        <dt>Sensor</dt><dd>${t.icon} ${esc(t.name)}</dd><dt>Name</dt><dd>${esc(wz.label)}</dd>
+        <dt>Pins</dt><dd>${pins}</dd><dt>Telemetry</dt><dd>LPP ch ${wz.ch} · ${esc(t.lpp)}</dd>
+        ${Object.keys(wz.opts).length?`<dt>Options</dt><dd>${esc(Object.entries(wz.opts).map(([k,v])=>k+"="+v).join(", "))}</dd>`:""}
+        <dt>Slot</dt><dd>${nextSlot()}</dd></dl>
+      <div class="row" style="margin-top:12px">
+        <button id="wzTest" ${can?"":"disabled"}>${wz.type==="i2c"?"🔍 Scan I²C bus":wz.type==="relay"?"⚡ Click relay (0.5 s)":"🔍 Read sensor now"}</button>
+        <span id="wzTestOut" class="small" style="font-family:var(--mono)">${can?"":"Connect the Heltec (or use demo mode) to test."}</span>
+      </div>
+      <label class="small" style="display:block;margin-top:12px"><input type="checkbox" id="wzWrite" ${wz.writeNow&&can?"checked":""} ${can?"":"disabled"}> Write to the Heltec right away (otherwise it waits under “Pending changes”)</label>`;
+    $("#wzWrite").onchange = e=>{ wz.writeNow = e.target.checked; renderWizardButtons(); };
+    $("#wzTest").onclick = wzTest;
+    if (wz.test) $("#wzTestOut").innerHTML = wz.test;
+  }
+}
+function renderWizardButtons(){
+  const t = SENSOR_TYPES[wz.type];
+  $("#wizNext").textContent = wz.step===4 ? (wz.writeNow && state.mode!=="off" ? "Add & write to Heltec" : "Add sensor") : "Next →";
+  $("#wizNext").disabled = (wz.step===2 && (wz.pin==null || (t.pins===2 && (wz.pin2==null || wz.pin2===wz.pin))));
+}
+function highlightPins(){
+  drawBoard();
+  [wz.pin, wz.pin2].filter(p=>p!=null).forEach(p=>{
+    const g = [...document.querySelectorAll("#board title")].find(x=>x.textContent.startsWith(`GPIO${p}:`));
+    if (g) g.parentNode.querySelector("rect").setAttribute("style","stroke:var(--accent2);stroke-width:3;fill:var(--accent2)");
+  });
+  const wb = $("#wzBoard"); if (wb) wb.innerHTML = $("#board").innerHTML;
+}
+function drawSensorWiring(){
+  const t = SENSOR_TYPES[wz.type], w = $("#wzWire"); w.innerHTML = "";
+  const S = (tag,a)=>svg(tag,a,w), n = t.wires.length, H = 60+n*40;
+  const T = (x,y,s,o={})=>{ const e = S("text",{x,y,"font-size":10.5,fill:"var(--ink)",...o}); e.textContent = s; return e; };
+  S("rect",{x:4,y:6,width:104,height:H-12,rx:8,fill:"var(--board)"});
+  T(56,24,"Heltec V4",{"text-anchor":"middle",fill:"var(--board-ink)","font-weight":600});
+  S("rect",{x:222,y:6,width:104,height:H-12,rx:8,fill:"var(--panel)",stroke:"var(--accent)","stroke-width":1.5});
+  T(274,24,`${t.icon} ${t.name}`,{"text-anchor":"middle","font-weight":600,"font-size":10});
+  const yOf = i => 50 + i*40, hName = h => h==="GPIO" ? `GPIO${wz.pin}` : h==="GPIO2" ? `GPIO${wz.pin2}` : h;
+  t.wires.forEach((wr,i)=>{
+    const y = yOf(i);
+    S("circle",{cx:108,cy:y,r:4.5,fill:"var(--pin)"}); S("circle",{cx:222,cy:y,r:4.5,fill:"var(--pin)"});
+    T(100,y+4,hName(wr.h),{"text-anchor":"end",fill:"var(--board-ink)","font-family":"var(--mono)"});
+    T(230,y+4,wr.s,{"font-size":9.5});
+    S("path",{d:`M112,${y} L218,${y}`,stroke:wr.c,"stroke-width":3.5,"stroke-linecap":"round"});
+  });
+  if (t.res){
+    const ia = t.wires.findIndex(x=>x.s===t.res.a), ib = t.wires.findIndex(x=>x.s===t.res.b);
+    const ya = yOf(ia), yb = yOf(ib), x = 190, top = Math.min(ya,yb), bot = Math.max(ya,yb), mid = (top+bot)/2;
+    S("path",{d:`M${x},${top} L${x},${mid-14} M${x},${mid+14} L${x},${bot}`,stroke:"var(--ink)","stroke-width":1.5});
+    S("rect",{x:x-5,y:mid-14,width:10,height:28,rx:2,fill:"#d6b98c",stroke:"var(--ink)","stroke-width":1});
+    S("circle",{cx:x,cy:top,r:2.5,fill:"var(--ink)"}); S("circle",{cx:x,cy:bot,r:2.5,fill:"var(--ink)"});
+    T(x-9,mid+4,t.res.v,{"text-anchor":"end","font-size":9.5,"font-weight":600});
+  }
+}
+async function wzTest(){
+  const out = $("#wzTestOut"); out.textContent = "…";
+  const spec = `${wz.type},${wz.pin}${wz.pin2!=null?"+"+wz.pin2:""}`;
+  const r = wz.type==="i2c" ? await devCmd(`addon i2c scan ${wz.pin},${wz.pin2}`) : await devCmd(`addon test ${spec}`);
+  if (r==null || /unknown|error/i.test(r)) { wz.test = `<span style="color:var(--err)">✗ ${esc(r||"no reply")}. Check the wiring.</span>`; }
+  else if (wz.type==="i2c"){
+    const addrs = (r.match(/0x[0-9a-f]{2}/gi)||[]).map(a=>a.toLowerCase());
+    wz.test = addrs.length ? `<span style="color:var(--ok)">✓ found:</span> ` + addrs.map(a=>`${a} ${esc(I2C_KNOWN[a]||"unknown")}`).join(", ")
+                           : `<span style="color:var(--err)">✗ nothing on the bus. Check SDA/SCL (swapped?) and 3V3.</span>`;
+  } else wz.test = `<span style="color:var(--ok)">✓</span> ${esc(r)}`;
+  out.innerHTML = wz.test;
+}
+$("#btnAddSensor").onclick = ()=>openWizard();
+$("#wizCancel").onclick = ()=>{ $("#wiz").classList.remove("open"); drawBoard(); };
+$("#wizBack").onclick = ()=>{ wz.step = Math.max(1, wz.step-1); renderWizard(); };
+$("#wizNext").onclick = async ()=>{
+  if (!wz || wz.done) return;
+  if (wz.step<4){ wz.step++; return renderWizard(); }
+  wz.done = true;
+  const t = SENSOR_TYPES[wz.type];
+  const s = {slot:nextSlot(), type:wz.type, pin:wz.pin, label:(wz.label||t.defLabel).trim(), ch:wz.ch, value:null, hist:[]};
+  if (t.pins===2) s.pin2 = wz.pin2;
+  if (Object.keys(wz.opts).length) s.opts = {...wz.opts};
+  state.slots.push(s);
+  stage("slot"+s.slot, slotCmd(s));
+  $("#wiz").classList.remove("open"); renderAll();
+  log("evt", `added slot ${s.slot}: ${s.label} on GPIO${s.pin}${s.pin2!=null?"/"+s.pin2:""}`);
+  if (wz.writeNow && state.mode!=="off") await applyPending();
+};
+
+/* ============================================================
+ * Slot dialog
+ * ============================================================ */
+let dlgSlot = null, dlgNew = false;
+function openSlot(s, isNew){
+  dlgSlot = s; dlgNew = !!isNew;
+  const t = SENSOR_TYPES[s.type];
+  $("#dlgTitle").textContent = `${isNew?"New":"Edit"} slot ${s.slot}: ${t.name}`;
+  const free = freePins().concat([s.pin, s.pin2]).filter(x=>x!=null).sort((a,b)=>a-b);
+  const opt = (sel)=>free.filter((v,i,a)=>a.indexOf(v)===i).map(g=>`<option ${g===sel?"selected":""}>${g}</option>`).join("");
+  let h = `<label class="small muted">Label</label><input id="fLabel" value="${esc(s.label)}" maxlength="20">
+           <label class="small muted">${t.pins===2?"SDA":"GPIO"}</label><select id="fPin">${opt(s.pin)}</select>`;
+  if (t.pins===2) h += `<label class="small muted">SCL</label><select id="fPin2">${opt(s.pin2)}</select>`;
+  h += `<label class="small muted">LPP channel</label><input id="fCh" type="number" min="1" max="99" value="${s.ch}">`;
+  for (const [k,v] of Object.entries(s.opts||{})) h += `<label class="small muted">${esc(k)}</label><input data-opt="${esc(k)}" value="${esc(v)}">`;
+  h += `<span></span><span class="small muted">Telemetry type: ${esc(t.lpp)}</span>`;
+  $("#dlgForm").innerHTML = h;
+  $("#dlgDel").style.display = isNew ? "none" : "";
+  $("#dlg").classList.add("open");
+}
+$("#dlgCancel").onclick = ()=>$("#dlg").classList.remove("open");
+$("#dlgOk").onclick = ()=>{
+  const s = dlgSlot;
+  s.label = $("#fLabel").value.trim()||s.label; s.pin = +$("#fPin").value; s.ch = +$("#fCh").value;
+  if ($("#fPin2")) s.pin2 = +$("#fPin2").value;
+  document.querySelectorAll("[data-opt]").forEach(i=>s.opts[i.dataset.opt] = isNaN(+i.value)? i.value : +i.value);
+  if (dlgNew) state.slots.push(s);
+  stage("slot"+s.slot, slotCmd(s));
+  $("#dlg").classList.remove("open"); renderAll();
+};
+$("#dlgDel").onclick = ()=>{
+  state.slots = state.slots.filter(x=>x!==dlgSlot);
+  stage("slot"+dlgSlot.slot, `addon slot ${dlgSlot.slot} none`);
+  $("#dlg").classList.remove("open"); renderAll();
+};
+
+/* ============================================================
+ * Tables, pending, rules
+ * ============================================================ */
+function sparkline(h){
+  if (h.length<2) return "";
+  const mn=Math.min(...h), mx=Math.max(...h), r=(mx-mn)||1;
+  const pts = h.map((v,i)=>`${(i/(h.length-1)*88+1).toFixed(1)},${(20-(v-mn)/r*18).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 90 22"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
+}
+function renderReadings(){
+  $("#sensTbl").innerHTML = state.slots.map(s=>`<tr>
+    <td>${s.slot}</td><td>${esc(s.label)}</td><td>${esc(SENSOR_TYPES[s.type]?.name||s.type)}</td>
+    <td>${s.pin}${s.pin2!=null?"/"+s.pin2:""}</td><td>${s.ch}</td>
+    <td class="num">${esc(fmtVal(s))}</td><td>${sparkline(s.hist)}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">No sensors configured</td></tr>`;
+}
+function renderRules(){
+  const p = esc(state.chan.prefix);
+  $("#ruleTbl").innerHTML = state.rules.map((r,i)=>`<tr>
+    <td class="rulecmd">${p+esc(r.cmd)}</td><td>Heltec</td>
+    <td style="font-family:var(--mono)">${esc(r.act)}</td>
+    <td><button data-del="${i}">✕</button></td></tr>`).join("") +
+    `<tr><td class="rulecmd">${p}scripts</td><td>Heltec</td><td class="muted">lists Pi scripts (cached)</td><td class="small muted">built-in</td></tr>
+     <tr><td class="rulecmd">${p}run &lt;name&gt; [args]</td><td><span style="color:var(--pi)">Raspberry Pi</span></td><td class="muted">runs a script, stdout is the reply</td><td class="small muted">built-in</td></tr>`;
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const r = state.rules.splice(+b.dataset.del,1)[0]; stage("rule:"+r.cmd, `addon rule del ${r.cmd}`); renderRules(); });
+  $("#ruleAct").innerHTML = FW_ACTIONS().map(a=>`<option value="${esc(a.v)}">${esc(a.l)}</option>`).join("");
+}
+$("#ruleAdd").onclick = ()=>{
+  const cmd = $("#ruleCmd").value.trim().replace(/^!/,"").toLowerCase(), act = $("#ruleAct").value;
+  if (!cmd) return;
+  if (/^(scripts|run)(\s|$)/.test(cmd)) return log("err",`"${cmd}" is reserved for Pi scripts`);
+  state.rules = state.rules.filter(r=>r.cmd!==cmd).concat({cmd, act});
+  stage("rule:"+cmd, `addon rule add ${act},${cmd}`);
+  $("#ruleCmd").value = ""; renderRules();
+};
+function renderScripts(){
+  $("#scriptTbl").innerHTML = state.scripts.length ? state.scripts.map(s=>`<tr>
+    <td class="rulecmd" style="white-space:nowrap">${esc(s.name)}</td><td class="small muted">${esc(s.desc||"")}</td>
+    <td style="text-align:right"><button data-run="${esc(s.name)}" ${state.mode==="off"||state.pi.state!=="up"?"disabled":""} title="Run now via USB → Heltec → Pi">▶</button></td></tr>`).join("")
+    : `<tr><td class="muted small">${state.pi.state==="up" ? "No scripts yet. Copy an executable file into the folder." : "Pi not connected"}</td></tr>`;
+  document.querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>devCmd("addon pi run "+b.dataset.run));
+}
+$("#btnScripts").onclick = ()=>devCmd("addon pi list");
+$("#simSend").onclick = ()=>{
+  const t = $("#simMsg").value.trim(); if (!t) return;
+  handleEvent({t:"chan",ch:state.chan.name,from:"you (sim)",text: t.startsWith(state.chan.prefix)?t:state.chan.prefix+t});
+};
+function renderPending(){
+  $("#pendingCount").textContent = state.pending.size;
+  $("#btnApply").disabled = state.mode==="off" || !state.pending.size;
+  $("#pending").textContent = state.pending.size ? [...state.pending.values()].join("\n") : "none";
+}
+function renderDev(){
+  const d = state.dev;
+  $("#dName").textContent = d.name||"–"; $("#dRole").textContent = d.role||"–"; $("#dFw").textContent = d.ver||"–";
+  $("#dAddon").innerHTML = state.mode==="off" ? "–" : state.addon ? `<span style="color:var(--ok)">installed</span>` : `<span style="color:var(--warn)">not installed</span>`;
+  $("#dRadio").textContent = d.radio||"–"; $("#dBatt").textContent = d.batt||"–"; $("#dUp").textContent = d.up||"–";
+  $("#addonWarn").style.display = state.mode!=="off" && !state.addon ? "" : "none";
+  const freeOpts = g => Object.keys(PINS).map(Number).filter(p=>!PINS[p].use && (!state.slots.some(s=>s.pin===p||s.pin2===p))).map(p=>`<option ${p==g?"selected":""}>${p}</option>`).join("");
+  $("#piTx").innerHTML = freeOpts(state.pi.tx); $("#piRx").innerHTML = freeOpts(state.pi.rx);
+  $("#piEn").value = state.pi.en ? "1":"0"; $("#piBaud").value = state.pi.baud; $("#piLink").value = state.pi.link||"uart";
+  drawWiring();
+  $("#chName").value = state.chan.name; $("#chKey").value = state.chan.key; $("#chPrefix").value = state.chan.prefix; $("#chAllow").value = state.chan.allow;
+}
+function renderAll(){ renderDev(); drawTopo(); drawBoard(); renderPalette(); renderReadings(); renderRules(); renderScripts(); renderPending(); }
+
+// form → pending
+["piEn","piLink","piTx","piRx","piBaud"].forEach(id=>$("#"+id).addEventListener("change",()=>{
+  Object.assign(state.pi,{en:+$("#piEn").value, link:$("#piLink").value, tx:+$("#piTx").value, rx:+$("#piRx").value, baud:+$("#piBaud").value});
+  stage("pi", state.pi.link==="usb" ? `addon pi ${state.pi.en},usb,${state.pi.baud}` : `addon pi ${state.pi.en},${state.pi.tx},${state.pi.rx},${state.pi.baud}`);
+  drawTopo(); drawBoard(); drawWiring();
+}));
+
+/* Wiring diagram Heltec V4 ↔ Pi Zero 2 W */
+function drawWiring(){
+  const w = $("#piWire"); w.innerHTML = "";
+  const usb = state.pi.link==="usb";
+  document.querySelectorAll(".uartonly").forEach(e=>e.style.display = usb?"none":"");
+  w.style.display = state.pi.en ? "" : "none";
+  if (!state.pi.en){ $("#piWireNote").innerHTML = `<span class="muted">Pi link is off. Set <b>Enabled: yes</b> to see how to wire a Raspberry Pi Zero 2 W (3 jumper wires, UART).</span>`; return; }
+  const S = (t,a)=>svg(t,a,w), T = (x,y,s,o={})=>{ const e = S("text",{x,y,"font-size":9.5,fill:"var(--ink)","font-family":"var(--mono)",...o}); e.textContent = s; return e; };
+  // boards
+  S("rect",{x:2,y:8,width:92,height:134,rx:8,fill:"var(--board)"});
+  T(48,24,"Heltec V4",{"text-anchor":"middle",fill:"var(--board-ink)","font-weight":600,"font-family":"inherit","font-size":10.5});
+  S("rect",{x:186,y:8,width:92,height:134,rx:8,fill:"#14532d"});
+  T(232,24,"Pi Zero 2 W",{"text-anchor":"middle",fill:"#e6f2ea","font-weight":600,"font-family":"inherit","font-size":10.5});
+  if (!usb){
+    const rows = [
+      {l:`GPIO${state.pi.tx} TX`, r:"pin 10 RXD", rs:"GPIO15", c:"var(--accent2)"},
+      {l:`GPIO${state.pi.rx} RX`, r:"pin 8 TXD", rs:"GPIO14", c:"var(--flow-rf)"},
+      {l:"GND", r:"pin 6 GND", rs:"", c:"var(--muted)"},
+    ];
+    rows.forEach((row,i)=>{
+      const y = 52 + i*32;
+      S("circle",{cx:94,cy:y,r:4,fill:"var(--pin)"}); S("circle",{cx:186,cy:y,r:4,fill:"var(--pin)"});
+      T(88,y+3,row.l,{"text-anchor":"end",fill:"var(--board-ink)"});
+      T(192,y-1,row.r,{fill:"#e6f2ea"}); if (row.rs) T(192,y+10,row.rs,{fill:"#e6f2ea",opacity:.7,"font-size":8.5});
+      S("path",{d:`M98,${y} C140,${y} 140,${y} 182,${y}`,stroke:row.c,"stroke-width":3,fill:"none","stroke-linecap":"round"});
+    });
+    T(140,157,`${state.pi.baud} 8N1 · 3.3 V both sides`,{"text-anchor":"middle",fill:"var(--muted)","font-family":"inherit","font-size":9});
+    $("#piWireNote").innerHTML = `<b>No USB cable between the boards.</b> Three jumper wires go from the Heltec pin header to the Pi's 40-pin header, crossed TX→RX and RX←TX. Both boards use 3.3 V logic, so no level shifter is needed. On the Pi, the port is <code>/dev/serial0</code>; <code>install.sh</code> enables it and turns off the serial login console.<br><span class="muted">The Heltec's USB-C stays free for this configurator and for power. Power the Pi from its own <b>PWR IN</b> micro-USB (5 V, ≥ 2 A). Don't wire 5 V between the boards while the Heltec is plugged into a PC.</span>`;
+  } else {
+    S("rect",{x:80,y:66,width:16,height:18,rx:3,fill:"#9aa4ae"}); T(48,80,"USB-C",{"text-anchor":"middle",fill:"var(--board-ink)"});
+    S("rect",{x:184,y:66,width:14,height:14,rx:2,fill:"#9aa4ae"}); T(232,76,"USB (data)",{"text-anchor":"middle",fill:"#e6f2ea"});
+    S("rect",{x:184,y:100,width:14,height:14,rx:2,fill:"#9aa4ae"}); T(232,110,"PWR IN",{"text-anchor":"middle",fill:"#e6f2ea"});
+    S("path",{d:"M96,75 C140,75 140,73 184,73",stroke:"var(--pi)","stroke-width":4,fill:"none"});
+    T(140,157,"Pi = USB host · Heltec = USB device (/dev/ttyACM0)",{"text-anchor":"middle",fill:"var(--muted)","font-family":"inherit","font-size":9});
+    $("#piWireNote").innerHTML = `<span style="color:var(--warn)"><b>Planned, not supported yet.</b></span> One cable from the Pi's inner micro-USB port (marked <b>USB</b>, not PWR) to the Heltec's USB-C. The Pi powers the Heltec and sees it as <code>/dev/ttyACM0</code>.<br><span class="muted">Trade-off: the Heltec has only one USB port. With the Pi plugged in, this browser can't connect over USB, so configuration would have to go through the Pi (over WiFi) instead. The firmware would also need to share the CLI and the Pi protocol on the same port. UART avoids both problems.</span>`;
+  }
+}
+["chName","chKey","chPrefix","chAllow"].forEach(id=>$("#"+id).addEventListener("change",()=>{
+  Object.assign(state.chan,{name:$("#chName").value.trim(), key:$("#chKey").value.trim(), prefix:$("#chPrefix").value||"!", allow:$("#chAllow").value.trim()});
+  stage("chan", `addon chan ${state.chan.name},${state.chan.key||"-"},${state.chan.prefix},${state.chan.allow||"*"}`); renderRules();
+}));
+
+/* ============================================================
+ * Connection buttons
+ * ============================================================ */
+function setMode(m){
+  state.mode = m;
+  const pill = $("#connPill");
+  pill.className = "pill" + (m==="serial"?" on":m==="demo"?" demo":"");
+  pill.textContent = m==="serial"?"USB connected":m==="demo"?"demo mode":"disconnected";
+  $("#btnConnect").disabled = m!=="off"; $("#btnDemo").disabled = m!=="off"; $("#btnDisconnect").disabled = m==="off";
+  $("#btnRead").disabled = m==="off"; $("#cliIn").disabled = $("#cliSend").disabled = m==="off";
+  renderPending();
+}
+async function connectAndRead(port){
+    serial.booted = false; serial.sawOutput = false;
+    await serial.open(port); setMode("serial");
+    // Opening the Heltec V4's USB port resets the ESP32-S3; it needs ~10 s to boot before the CLI answers.
+    log("evt","connected, waiting for the Heltec to boot…");
+    const t0 = Date.now();
+    await new Promise(res=>{ const iv = setInterval(()=>{
+      const dt = Date.now()-t0;
+      if (serial.booted || dt > 15000 || (!serial.sawOutput && dt > 3000)) { clearInterval(iv); res(); }
+    }, 200); });
+    await new Promise(r=>setTimeout(r,700));
+    await devCmd(""); await readDevice(); if (state.addon) await devCmd("addon events on");
+}
+$("#btnConnect").onclick = async ()=>{
+  if (!("serial" in navigator)) return log("err","Web Serial isn't available. Use Chrome or Edge over https:// or localhost.");
+  try { await connectAndRead(); } catch(e){ log("err", e.message); }
+};
+$("#btnDemo").onclick = async ()=>{
+  resetState(); setMode("demo"); await readDevice(); demo.start();
+  $("#piState").innerHTML = `<span style="color:var(--ok)">● up</span>`;
+};
+$("#btnDisconnect").onclick = async ()=>{ demo.stop(); await serial.close(); setMode("off"); resetState(); $("#log").innerHTML = ""; log("evt","Disconnected."); renderAll(); fwRender(); };
+$("#btnRead").onclick = readDevice;
+$("#btnApply").onclick = applyPending;
+$("#btnFlash").onclick = ()=>openFlashDialog("addon");
+$("#cliSend").onclick = async ()=>{ const c = $("#cliIn").value; $("#cliIn").value=""; if (c) await devCmd(c); };
+$("#cliIn").addEventListener("keydown", e=>{ if (e.key==="Enter") $("#cliSend").click(); });
+$("#btnTheme").onclick = ()=>{
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark"; try{ localStorage.setItem("theme", r.dataset.theme); }catch(e){}
+};
+try{ const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; }catch(e){}
+document.querySelectorAll(".tabs button[data-tab]").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+function switchTab(id){ document.querySelectorAll(".tabs button[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===id)); document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.id===id)); }
+setInterval(()=>{ const now=Date.now(); state.pktTimes = state.pktTimes.filter(t=>now-t<60000); $("#pktRate").textContent = state.pktTimes.length+" pkt/min"; }, 2000);
+
+/* ============================================================
+ * Firmware & updates
+ * Catalogue + releases come from the official flasher (flasher.meshcore.io) through the
+ * same-origin proxy /mc/*; MeshAddon builds from /fw/manifest.json (firmware/check-upstream.py).
+ * ============================================================ */
+const fw = { config:null, releases:null, manifest:null, board:"Heltec v4", err:null, checked:null };
+try { fw.board = localStorage.getItem("fwBoard") || fw.board; } catch(e){}
+const vtuple = v => { const m = String(v||"").match(/(\d+)\.(\d+)\.(\d+)/); return m ? m.slice(1).map(Number) : null; };
+const vcmp = (a,b) => { const x = vtuple(a)||[0,0,0], y = vtuple(b)||[0,0,0]; for (let i=0;i<3;i++) if (x[i]!==y[i]) return x[i]-y[i]; return 0; };
+const vstr = v => { const t = vtuple(v); return t ? "v"+t.join(".") : "?"; };
+
+async function fwLoad(force){
+  fw.err = null; $("#fwStatus").innerHTML = `<span class="muted small">Checking flasher.meshcore.io …</span>`;
+  const j = async u => { const r = await fetch(u, {cache: force?"no-store":"default"}); if (!r.ok) throw new Error(u+" → HTTP "+r.status); return r.json(); };
+  try {
+    [fw.config, fw.releases] = await Promise.all([j("mc/config.json"), j("mc/releases?repo=github")]);
+    fw.manifest = await j("fw/manifest.json").catch(()=>({builds:[]}));
+    fw.checked = new Date();
+  } catch(e){
+    fw.err = location.protocol==="file:" ? "The update check needs the page served through the included Caddy config, which proxies the MeshCore flasher as /mc/." : "Couldn't reach the MeshCore flasher: "+e.message;
+  }
+  fwRender();
+}
+// Heltec V4 boards that have an official repeater build, with that build's filename patterns
+function fwBoards(){
+  if (!fw.config) return [];
+  return fw.config.device.filter(d=>d.maker==="heltec" && /v4/i.test(d.name))
+    .map(d=>({name:d.name, src:(d.firmware.find(f=>f.role==="repeater" && f.github)||{}).github})).filter(b=>b.src);
+}
+// Official repeater releases for a board, newest first: [{version, notes, update, wipe}]
+function fwOfficial(board){
+  const b = fwBoards().find(x=>x.name===board); if (!b || !fw.releases) return [];
+  const pu = new RegExp(b.src.files["flash-update"]), pw = new RegExp(b.src.files["flash-wipe"]);
+  return fw.releases.filter(r=>r.type===b.src.type).map(r=>({
+    version:r.version, notes:r.notes||"",
+    update:r.files.find(f=>pu.test(f.name) && !/merged/.test(f.name)), wipe:r.files.find(f=>pw.test(f.name)),
+  })).filter(r=>r.update).sort((a,b)=>vcmp(b.version,a.version));
+}
+function fwInstalled(){
+  const v = state.dev.ver; if (!v || v==="–") return null;
+  const add = v.match(/addon\s*v?([\d.]+)/i);
+  return { base: vtuple(v) ? vstr(v) : null, addon: state.addon ? (add ? add[1] : "?") : null, raw: v };
+}
+const badge = (txt, col) => `<span class="badge" style="color:var(--${col});border-color:var(--${col})">${txt}</span>`;
+function fwRender(){
+  const sel = $("#fwBoard"), boards = fwBoards();
+  sel.innerHTML = boards.length ? boards.map(b=>`<option ${b.name===fw.board?"selected":""}>${esc(b.name)}</option>`).join("") : `<option>${esc(fw.board)}</option>`;
+  if (fw.err){ $("#fwStatus").innerHTML = `<div class="warnbox">${esc(fw.err)}</div>`; $("#fwDl").innerHTML = ""; $("#fwNotesWrap").style.display="none"; return; }
+  if (!fw.config) return;
+  const off = fwOfficial(fw.board), latest = off[0], inst = fwInstalled();
+  const builds = (fw.manifest?.builds||[]).filter(b=>!b.board || b.board===fw.board).sort((a,b)=>vcmp(b.base,a.base));
+  const ab = builds[0];
+  const instTxt = !inst ? `<span class="muted">connect the Heltec to see</span>`
+    : `${esc(inst.base||inst.raw)}${inst.addon?` + MeshAddon ${esc(inst.addon)}`:" (official repeater)"}`;
+  const offNewer = inst?.base && latest && vcmp(latest.version, inst.base) > 0;
+  const abNewer = ab && inst && (!inst.addon || vcmp(ab.base, inst.base||"0.0.0") > 0 || vcmp(ab.addon, inst.addon) > 0);
+  let rec;
+  if (!inst) rec = "";
+  else if (inst.addon && ab && abNewer) rec = `<b style="color:var(--accent)">Update available:</b> MeshAddon ${esc(ab.addon)} on MeshCore ${esc(vstr(ab.base))}. Your sensors and settings are kept.`;
+  else if (inst.addon && offNewer) rec = `MeshCore ${esc(vstr(latest.version))} is out. The MeshAddon build based on it ${ab?"is older":"hasn't been built yet"}; the daily upstream check builds it automatically.`;
+  else if (!inst.addon) rec = `Official repeater firmware. ${offNewer?`MeshCore ${esc(vstr(latest.version))} is available, but `:""}installing <b>MeshAddon</b> is needed for sensors and the Pi link.`;
+  else rec = `<span style="color:var(--ok)">✓ Up to date.</span>`;
+  $("#fwStatus").innerHTML = `<dl class="kv small">
+      <dt>Installed</dt><dd>${instTxt}</dd>
+      <dt>Official</dt><dd>${latest?`MeshCore repeater ${esc(vstr(latest.version))} ${offNewer?badge("newer","warn"):inst?.base?badge("same/older","ok"):""}`:"–"}</dd>
+      <dt>MeshAddon</dt><dd>${ab?`${esc(ab.addon)} on ${esc(vstr(ab.base))} ${abNewer?badge("newer","warn"):""}`:`<span class="muted">no build yet (phase 2)</span>`}</dd>
+      <dt>Checked</dt><dd>${fw.checked?fw.checked.toLocaleTimeString():"–"} <span class="muted">· flasher.meshcore.io</span></dd>
+    </dl>${rec?`<p class="small" style="margin:8px 0 0">${rec}</p>`:""}`;
+  // release notes for versions newer than what's installed (or the latest 3)
+  const newer = off.filter(r=>!inst?.base || vcmp(r.version, inst.base) > 0).slice(0, 6);
+  const show = newer.length ? newer : off.slice(0,3);
+  $("#fwNotesWrap").style.display = show.length ? "" : "none";
+  $("#fwNotesWrap summary").textContent = newer.length && inst?.base ? `What's new since ${inst.base} (${newer.length} release${newer.length>1?"s":""})` : "Latest release notes";
+  $("#fwNotes").innerHTML = show.map(r=>`<div class="fwrel"><b>${esc(vstr(r.version))}</b><div>${esc(r.notes.replace(/\r/g,"").trim()).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g,"<br>")||"<span class='muted'>no notes</span>"}</div></div>`).join("");
+  // downloads
+  const link = (f, txt) => f ? `<a href="mc${esc(f.url)}" download="${esc(f.name)}">${txt}</a>` : "";
+  $("#fwDl").innerHTML = (ab ? `<div><b>MeshAddon ${esc(ab.addon)}</b>: <a href="fw/${esc(ab.files.update)}" download>update .bin</a> · <a href="fw/${esc(ab.files.full)}" download>full .bin</a></div>` : "")
+    + (latest ? `<div class="muted">Official ${esc(vstr(latest.version))}: ${link(latest.update,"update .bin (keeps settings)")} · ${link(latest.wipe,"full .bin (erases)")} · <a href="https://flasher.meshcore.io/" target="_blank" rel="noopener">open MeshCore flasher ↗</a></div>` : "");
+  $("#fwFlash").disabled = !(ab || latest);
+  $("#fwFoot").innerHTML = `“Update” writes only the app (flash offset 0x10000): node identity, name, radio settings and MeshAddon config are kept. “Full” erases everything and creates a <b>new node identity</b>. Installing the official firmware removes MeshAddon (sensors and Pi link stop). Back up first.`;
+}
+$("#fwFlash").onclick = ()=>openFlashDialog();
+$("#fwBoard").onchange = e=>{ fw.board = e.target.value; try{ localStorage.setItem("fwBoard", fw.board); }catch(_){} fwRender(); };
+$("#fwCheck").onclick = ()=>fwLoad(true);
+
+/* Settings backup / restore (repeater CLI + MeshAddon config). The admin password can't be read back. */
+const BACKUP_KEYS = ["name","radio","tx","lat","lon","af","repeat","advert.interval","flood.advert.interval","flood.max","rxdelay","txdelay","multi.acks","guest.password","allow.read.only","owner.info"];
+$("#fwBackup").onclick = ()=>doBackup();
+async function doBackup(){
+  if (state.mode==="off") { log("err","Connect the Heltec (or demo mode) to back up its settings."); return null; }
+  const b = { meshaddon_backup:1, created:new Date().toISOString(), board:fw.board, ver:state.dev.ver, settings:{} };
+  for (const k of BACKUP_KEYS){ const r = await devCmd("get "+k); if (r && r.startsWith(">")) b.settings[k] = r.replace(/^>\s*/,""); }
+  if (state.addon){ try { b.addon = JSON.parse(await devCmd("addon dump", 4000)); } catch(e){ log("err","addon dump failed; backup has repeater settings only"); } }
+  const blob = new Blob([JSON.stringify(b,null,1)], {type:"application/json"}), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `meshaddon-backup-${(state.dev.name||"node").replace(/[^\w-]+/g,"_")}-${b.created.slice(0,10)}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  try { localStorage.setItem("lastBackup", JSON.stringify(b)); } catch(e){}
+  log("evt", `backup saved: ${Object.keys(b.settings).length} settings${b.addon?`, ${b.addon.slots?.length||0} sensor slots`:""}`);
+  return b;
+}
+$("#fwRestore").onchange = async e=>{
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  let b; try { b = JSON.parse(await f.text()); } catch(_){ return log("err","not a JSON file"); }
+  if (!b.meshaddon_backup) return log("err","not a MeshAddon backup file");
+  for (const [k,v] of Object.entries(b.settings||{})) stage("set:"+k, `set ${k} ${v}`);
+  if (b.addon){
+    (b.addon.slots||[]).forEach(s=>stage("slot"+s.slot, slotCmd({...s, label:s.label||"slot"+s.slot})));
+    const c = b.addon.chan; if (c) stage("chan", `addon chan ${c.name},${c.key||"-"},${c.prefix||"!"},${c.allow||"*"}`);
+    const p = b.addon.pi;   if (p) stage("pi", p.link==="usb" ? `addon pi ${p.en},usb,${p.baud}` : `addon pi ${p.en},${p.tx},${p.rx},${p.baud}`);
+    (b.addon.rules||[]).forEach(r=>stage("rule:"+r.cmd, `addon rule add ${r.act},${r.cmd}`));
+  }
+  log("evt", `restore from ${f.name} (${b.created?.slice(0,10)||"?"}): ${state.pending.size} commands staged. Review “Pending changes” and click Apply. A radio change needs a reboot.`);
+};
+
+/* ============================================================
+ * Phase 3: install firmware from the browser (flash.js + esptool-js 0.7.1)
+ * Steps: backup → download + SHA-256 check → bootloader + write + MD5 verify → reconnect + verify
+ * ============================================================ */
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+let flashBusy = false;
+function flashChoices(){
+  const off = fwOfficial(fw.board), latest = off[0];
+  const builds = (fw.manifest?.builds||[]).filter(b=>!b.board || b.board===fw.board).sort((a,b)=>vcmp(b.base,a.base));
+  const out = [];
+  builds.slice(0,3).forEach((b,i)=>out.push({ id:"addon"+i, kind:"addon", title:`MeshAddon ${b.addon} on MeshCore ${vstr(b.base)}`, tag: i===0?"recommended":"",
+    expect:`${vstr(b.base)}-addon${b.addon}`,
+    update:{url:"fw/"+b.files.update, sha:b.sha256?.update}, full:{url:"fw/"+b.files.full, sha:b.sha256?.full} }));
+  if (latest) out.push({ id:"official", kind:"official", title:`Official MeshCore repeater ${vstr(latest.version)}`, tag:"removes MeshAddon",
+    expect: vstr(latest.version),
+    update:{url:"mc"+latest.update.url, sha:null}, full: latest.wipe ? {url:"mc"+latest.wipe.url, sha:null} : null });
+  return out;
+}
+function openFlashDialog(prefer){
+  if (!fw.config) { log("err","Firmware list not loaded yet. Serve the page with the included Caddy config and click “Check now”."); return; }
+  if (!("serial" in navigator)) { log("err","Flashing needs Web Serial: use Chrome or Edge."); return; }
+  if (state.mode==="demo") { log("err","Leave demo mode first (Disconnect), then connect the Heltec."); return; }
+  const ch = flashChoices();
+  if (!ch.length) { log("err","No firmware available for "+fw.board); return; }
+  const sel = (prefer==="official" ? ch.find(c=>c.kind==="official") : ch[0]) || ch[0];
+  $("#flashBody").innerHTML = `
+    <p class="small" style="margin:0 0 8px">Board: <b>${esc(fw.board)}</b> · installed: <b>${esc(state.dev.ver||"unknown (not connected)")}</b></p>
+    <div class="small muted" style="margin-bottom:4px">Firmware</div>
+    ${ch.map(c=>`<label class="flashopt"><input type="radio" name="fwsel" value="${c.id}" ${c===sel?"checked":""}> ${esc(c.title)} ${c.tag?`<span class="badge">${esc(c.tag)}</span>`:""}</label>`).join("")}
+    <div class="small muted" style="margin:10px 0 4px">Mode</div>
+    <label class="flashopt"><input type="radio" name="fwmode" value="update" checked> <b>Update</b>: writes the app only (0x10000). Keeps node identity, name, radio settings, sensors and rules.</label>
+    <label class="flashopt"><input type="radio" name="fwmode" value="full"> <b>Full install</b>: erases the whole flash (0x0). <span style="color:var(--err)">New node identity; all settings lost.</span> Use for a broken board or other firmware.</label>
+    <label class="small" id="fullAck" style="display:none;margin:6px 0 0 24px"><input type="checkbox" id="fullAckCb"> I understand that the node gets a new identity</label>
+    <ol class="flashsteps" id="flashSteps">
+      <li data-s="0">Back up settings (download JSON)</li>
+      <li data-s="1">Download firmware and check SHA-256</li>
+      <li data-s="2">Restart into bootloader, write and verify (MD5)</li>
+      <li data-s="3">Reconnect and check version and identity</li>
+    </ol>
+    <div class="pbar"><div id="flashBar"></div></div>
+    <div id="flashMsg" class="small" style="margin-top:6px;min-height:1.4em"></div>
+    <div class="warnbox" style="margin-top:8px">Keep the USB cable plugged in and this tab open until it finishes (about 30 s). If it fails half-way, the board stays in the bootloader and you can simply run it again. If the board doesn't respond at all, hold <b>PRG</b>, tap <b>RST</b>, release <b>PRG</b>, then click Start.</div>`;
+  const updAck = ()=>{ const full = document.querySelector('input[name=fwmode]:checked').value==="full"; $("#fullAck").style.display = full?"":"none"; };
+  document.querySelectorAll('input[name=fwmode]').forEach(r=>r.onchange = updAck);
+  $("#flashStart").disabled = false; $("#flashStart").textContent = "Start"; $("#flashClose").disabled = false;
+  $("#flashDlg").classList.add("open");
+}
+// The S3's native USB normally stays enumerated through the reset (verified with udev),
+// so the same SerialPort works. Fall back to an already-granted Espressif port if it was replaced.
+async function reopenAfterFlash(oldPort){
+  for (let i = 0; i < 8; i++){
+    const ports = await navigator.serial.getPorts();
+    const cand = ports.includes(oldPort) ? oldPort : ports.find(p=>p.getInfo().usbVendorId===0x303a);
+    if (cand){
+      try { await connectAndRead(cand); return true; }
+      catch(e){ log("evt","reconnect attempt failed: "+e.message); try { await serial.close(); } catch(_){} }
+    }
+    await sleep(1000);
+  }
+  return false;
+}
+function flashStep(i, st){ const li = document.querySelector(`#flashSteps li[data-s="${i}"]`); if (li) li.className = st; }
+function flashMsg(t, cls){ $("#flashMsg").innerHTML = cls ? `<span style="color:var(--${cls})">${t}</span>` : t; }
+$("#flashClose").onclick = ()=>{ if (!flashBusy) $("#flashDlg").classList.remove("open"); };
+$("#flashStart").onclick = async ()=>{
+  if (flashBusy) return;
+  const c = flashChoices().find(x=>x.id===document.querySelector('input[name=fwsel]:checked').value);
+  const mode = document.querySelector('input[name=fwmode]:checked').value;
+  const target = mode==="full" ? c.full : c.update;
+  if (!target) return flashMsg("This firmware has no full image.", "err");
+  if (mode==="full" && !$("#fullAckCb").checked) return flashMsg("Tick the box to confirm a full install.", "err");
+  flashBusy = true; $("#flashStart").disabled = true; $("#flashClose").disabled = true;
+  document.querySelectorAll("#flashBody input").forEach(i=>i.disabled = true);
+  $("#flashBar").style.width = "0%";
+  let port = null, before = null, step = 0;
+  try {
+    // need a port: reuse the CLI connection, otherwise ask now (must happen right after the click)
+    if (state.mode==="serial") port = serial.port;
+    else port = await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});
+    const libs = Promise.all([import("./flash.js"), import("./vendor/esptool-js-0.7.1.bundle.js")]);
+
+    step = 0; flashStep(0,"run");
+    if (state.mode==="serial"){
+      const pk = await devCmd("get public.key");
+      before = { pub: pk ? pk.replace(/^>\s*/,"") : null, ver: state.dev.ver, name: state.dev.name };
+      await doBackup();
+      flashStep(0,"ok");
+    } else flashStep(0,"skip");
+
+    step = 1; flashStep(1,"run"); flashMsg("Downloading "+esc(target.url.split("/").pop())+" …");
+    const r = await fetch(target.url, {cache:"no-store"});
+    if (!r.ok) throw new Error("download failed: HTTP "+r.status);
+    const image = new Uint8Array(await r.arrayBuffer());
+    const [{flashFirmware, sha256hex, APP_OFFSET}, esptool] = await libs;
+    const sha = await sha256hex(image);
+    if (target.sha && sha !== target.sha) throw new Error("SHA-256 mismatch: the downloaded file is corrupt");
+    flashStep(1,"ok"); flashMsg(`${(image.length/1024).toFixed(0)} KB · sha256 ${sha.slice(0,12)}…${target.sha?" ✓ matches manifest":""}`);
+
+    step = 2; flashStep(2,"run");
+    if (state.mode==="serial"){ demo.stop(); await serial.close(); setMode("off"); }
+    log("evt", `flashing ${target.url.split("/").pop()} at 0x${(mode==="full"?0:APP_OFFSET).toString(16)}…`);
+    const chip = await flashFirmware({
+      esptool, port, image, address: mode==="full" ? 0 : APP_OFFSET, eraseAll: mode==="full",
+      onProgress: (w,t)=>{ const p = Math.round(w/t*100); $("#flashBar").style.width = p+"%"; flashMsg(`Writing… ${p}%`); },
+      log: (s)=>{ if (s && !/^\.+$/.test(s)) log("evt", "esptool: "+s); },
+    });
+    flashStep(2,"ok"); flashMsg(`${esc(chip)}: written and verified. Waiting for the board to boot…`);
+
+    step = 3; flashStep(3,"run");
+    await sleep(1500);
+    resetState();
+    if (!await reopenAfterFlash(port)) {
+      flashStep(3,"warn"); flashMsg("Flashed OK, but the port didn't reopen automatically. Click <b>Connect USB</b> to check the board.", "warn");
+      return;
+    }
+    const verOk = (state.dev.ver||"").startsWith(c.expect);
+    const pubAfter = (await devCmd("get public.key")||"").replace(/^>\s*/,"");
+    let msg = `Running <b>${esc(state.dev.ver||"?")}</b>${verOk?" ✓":` <span style="color:var(--warn)">(expected ${esc(c.expect)})</span>`}.`;
+    if (before?.pub && mode==="update") msg += pubAfter===before.pub ? " Same node identity ✓" : ` <span style="color:var(--err)">Identity changed!</span>`;
+    if (mode==="full") msg += " New identity: "+esc(pubAfter.slice(0,12))+"…";
+    flashStep(3, verOk ? "ok" : "warn");
+    flashMsg(msg, verOk ? "ok" : "warn");
+    fwRender();
+  } catch(e){
+    flashStep(step, "err");
+    flashMsg("✗ "+esc(e.message||String(e)), "err");
+    log("err", "flash: "+(e.message||e));
+    if (step===2) log("evt", "The board may be in the bootloader now. Run the install again, or hold PRG + tap RST and retry.");
+  } finally {
+    flashBusy = false; $("#flashClose").disabled = false; $("#flashStart").textContent = "Run again"; $("#flashStart").disabled = false;
+    document.querySelectorAll("#flashBody input").forEach(i=>i.disabled = false);
+  }
+};
+
+setMode("off"); renderAll(); fwLoad();
+log("evt","Ready. Click “Connect USB” (Chrome/Edge) or “Demo mode”.");
+</script>
+</body>
+</html>

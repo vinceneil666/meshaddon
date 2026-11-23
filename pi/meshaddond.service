@@ -1,0 +1,13 @@
+[Unit]
+Description=MeshAddon Pi link (run scripts from MeshCore)
+After=dev-serial0.device
+[Service]
+ExecStart=/usr/bin/python3 /opt/meshaddon/meshaddond.py --port /dev/serial0 --scripts /opt/meshaddon/scripts --timeout 30
+Restart=always
+RestartSec=3
+User=meshaddon
+Group=meshaddon
+SupplementaryGroups=dialout gpio
+NoNewPrivileges=yes
+[Install]
+WantedBy=multi-user.target

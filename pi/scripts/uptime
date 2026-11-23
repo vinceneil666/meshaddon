@@ -1,0 +1,3 @@
+#!/bin/sh
+# desc: Pi uptime and load
+echo "$(hostname) $(uptime -p) load $(cut -d' ' -f1 /proc/loadavg)"

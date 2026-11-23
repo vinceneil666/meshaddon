@@ -1,0 +1,5 @@
+[Unit]
+Description=MeshAddon: check flasher.meshcore.io for new Heltec V4 repeater firmware
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/meshaddon/firmware/check-upstream.py

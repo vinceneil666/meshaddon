@@ -1,0 +1,160 @@
+diff --git a/examples/simple_repeater/MyMesh.cpp b/examples/simple_repeater/MyMesh.cpp
+index 61b6c149..3226912c 100644
+--- a/examples/simple_repeater/MyMesh.cpp
++++ b/examples/simple_repeater/MyMesh.cpp
+@@ -1,4 +1,7 @@
+ #include "MyMesh.h"
++#ifdef MESHADDON
++  #include "MeshAddon.h"
++#endif
+ #include <algorithm>
+ 
+ /* ------------------------------ Config -------------------------------- */
+@@ -248,6 +251,9 @@ int MyMesh::handleRequest(ClientInfo *sender, uint32_t sender_timestamp, uint8_t
+       perm_mask = 0x00;  // just base telemetry allowed
+     }
+     sensors.querySensors(perm_mask, telemetry);
++#ifdef MESHADDON
++    addon.appendTelemetry(perm_mask, telemetry);
++#endif
+ 
+ 	// This default temperature will be overridden by external sensors (if any)
+     float temperature = board.getMCUTemperature();
+@@ -477,6 +483,9 @@ void MyMesh::logRxRaw(float snr, float rssi, const uint8_t raw[], int len) {
+ }
+ 
+ void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
++#ifdef MESHADDON
++  addon.onRx(pkt->getPayloadType(), _radio->getLastSNR(), _radio->getLastRSSI());
++#endif
+ #ifdef WITH_BRIDGE
+   if (_prefs.bridge_pkt_src == 1) {
+     bridge.sendPacket(pkt);
+@@ -1338,3 +1347,28 @@ bool MyMesh::hasPendingWork() const {
+ #endif
+   return _mgr->getOutboundTotal() > 0;
+ }
++
++#ifdef MESHADDON
++// MeshAddon: decrypt only the configured command channel; packets are still forwarded as usual.
++int MyMesh::searchChannelsByHash(const uint8_t* hash, mesh::GroupChannel channels[], int max_matches) {
++  return addon.searchChannel(hash, channels, max_matches);
++}
++
++void MyMesh::onGroupDataRecv(mesh::Packet* packet, uint8_t type, const mesh::GroupChannel& channel, uint8_t* data, size_t len) {
++  if (type == PAYLOAD_TYPE_GRP_TXT) addon.onChannelText(data, len);
++}
++
++// Send "<node name>: <text>" as a plain channel message (same format as the apps).
++bool MyMesh::addonSendChannelText(const mesh::GroupChannel& channel, const char* text) {
++  uint8_t temp[5 + 160 + 1];
++  uint32_t ts = getRTCClock()->getCurrentTimeUnique();
++  memcpy(temp, &ts, 4);
++  temp[4] = 0;   // TXT_TYPE_PLAIN
++  int n = snprintf((char*)&temp[5], 161, "%s: %s", _prefs.node_name, text);
++  if (n > 160) n = 160;
++  auto pkt = createGroupDatagram(PAYLOAD_TYPE_GRP_TXT, channel, temp, 5 + n);
++  if (!pkt) return false;
++  sendFlood(pkt, 300);
++  return true;
++}
++#endif
+diff --git a/examples/simple_repeater/MyMesh.h b/examples/simple_repeater/MyMesh.h
+index dc893258..1bfa7a8a 100644
+--- a/examples/simple_repeater/MyMesh.h
++++ b/examples/simple_repeater/MyMesh.h
+@@ -172,6 +172,10 @@ protected:
+   void onPeerDataRecv(mesh::Packet* packet, uint8_t type, int sender_idx, const uint8_t* secret, uint8_t* data, size_t len) override;
+   bool onPeerPathRecv(mesh::Packet* packet, int sender_idx, const uint8_t* secret, uint8_t* path, uint8_t path_len, uint8_t extra_type, uint8_t* extra, uint8_t extra_len) override;
+   void onControlDataRecv(mesh::Packet* packet) override;
++#ifdef MESHADDON
++  int searchChannelsByHash(const uint8_t* hash, mesh::GroupChannel channels[], int max_matches) override;
++  void onGroupDataRecv(mesh::Packet* packet, uint8_t type, const mesh::GroupChannel& channel, uint8_t* data, size_t len) override;
++#endif
+ 
+   void sendFloodReply(mesh::Packet* packet, unsigned long delay_millis, uint8_t path_hash_size);
+ 
+@@ -184,6 +188,9 @@ public:
+   const char* getBuildDate() override { return FIRMWARE_BUILD_DATE; }
+   const char* getRole() override { return FIRMWARE_ROLE; }
+   const char* getNodeName() { return _prefs.node_name; }
++#ifdef MESHADDON
++  bool addonSendChannelText(const mesh::GroupChannel& channel, const char* text);
++#endif
+   NodePrefs* getNodePrefs() {
+     return &_prefs;
+   }
+diff --git a/examples/simple_repeater/main.cpp b/examples/simple_repeater/main.cpp
+index d475b13d..9280a175 100644
+--- a/examples/simple_repeater/main.cpp
++++ b/examples/simple_repeater/main.cpp
+@@ -2,6 +2,9 @@
+ #include <Mesh.h>
+ 
+ #include "MyMesh.h"
++#ifdef MESHADDON
++  #include "MeshAddon.h"
++#endif
+ 
+ #ifdef DISPLAY_CLASS
+   #include "UITask.h"
+@@ -106,6 +109,10 @@ void setup() {
+ 
+   the_mesh.begin(fs);
+ 
++#ifdef MESHADDON
++  addon.begin(fs);
++#endif
++
+ #ifdef DISPLAY_CLASS
+   ui_task.begin(the_mesh.getNodePrefs(), FIRMWARE_BUILD_DATE, FIRMWARE_VERSION);
+ #endif
+@@ -149,6 +156,12 @@ void loop() {
+   if (len > 0 && command[len - 1] == '\r') {  // received complete line
+     Serial.print('\n');
+     command[len - 1] = 0;  // replace newline with C string null terminator
++#ifdef MESHADDON
++    if (addon.handleSerialCommand(command)) {  // "addon ..." commands print their own reply
++      command[0] = 0;
++      return;
++    }
++#endif
+     char reply[160];
+     reply[0] = 0;
+ #ifdef ETHERNET_ENABLED
+@@ -197,6 +210,9 @@ void loop() {
+ 
+   the_mesh.loop();
+   sensors.loop();
++#ifdef MESHADDON
++  addon.loop();
++#endif
+ #ifdef DISPLAY_CLASS
+   ui_task.loop();
+ #endif
+diff --git a/variants/heltec_v4/platformio.ini b/variants/heltec_v4/platformio.ini
+index 76e8e714..41ab889c 100644
+--- a/variants/heltec_v4/platformio.ini
++++ b/variants/heltec_v4/platformio.ini
+@@ -102,6 +102,21 @@ lib_deps =
+   ${esp32_ota.lib_deps}
+   bakercp/CRC32 @ ^2.0.0
+ 
++[env:heltec_v4_repeater_addon]
++; MeshAddon: repeater + GPIO sensors, command channel and Pi script link (https://github.com/vinceneil666/meshaddon)
++extends = env:heltec_v4_repeater
++build_flags =
++  ${env:heltec_v4_repeater.build_flags}
++  -D MESHADDON=1
++  -D ENV_PIN_SDA=3
++  -D ENV_PIN_SCL=4
++lib_deps =
++  ${env:heltec_v4_repeater.lib_deps}
++  paulstoffregen/OneWire @ ^2.3.8
++  milesburton/DallasTemperature @ ^3.11.0
++  beegee-tokyo/DHT sensor library for ESPx @ ^1.19
++  bblanchon/ArduinoJson @ ^7.2.1
++
+ [env:heltec_v4_expansionkit_repeater]
+ extends = heltec_v4_oled
+ build_flags =

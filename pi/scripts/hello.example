@@ -1,0 +1,3 @@
+#!/bin/sh
+# desc: example - shows args and who asked (chmod +x and rename to enable)
+echo "hi $MESH_FROM, args: $* (node $MESH_NODE, slot1=$MESH_S1)"

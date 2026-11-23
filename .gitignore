@@ -1,0 +1,8 @@
+backups/
+backups/*.bin
+docker-compose.override.yml
+firmware/.build/
+firmware/meshcore/
+fw/*.bin
+fw/upstream.json
+__pycache__/

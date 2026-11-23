@@ -1,0 +1,20 @@
+{
+ "builds": [
+  {
+   "board": "Heltec v4",
+   "env": "heltec_v4_repeater_addon",
+   "base": "v1.18.0",
+   "addon": "0.1",
+   "built": "2026-11-23T10:19:49+0100",
+   "files": {
+    "update": "meshaddon-heltec_v4-v1.18.0-addon0.1.bin",
+    "full": "meshaddon-heltec_v4-v1.18.0-addon0.1-merged.bin"
+   },
+   "sha256": {
+    "update": "98c40011537d13165788e1819703e8394f382d2f289e67a7399cb96d734bb50a",
+    "full": "9ff8c31541e8e577437fb439ffaed53fadb5973eae4f965569f45ae9c4a07732"
+   },
+   "notes": "MeshAddon 0.1 on official MeshCore repeater v1.18.0"
+  }
+ ]
+}

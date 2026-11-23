@@ -1,0 +1,27 @@
+# MeshAddon web configurator. Web Serial needs HTTPS (or localhost).
+# Site address from $MESHADDON_SITE (default localhost:8444). "tls internal" = Caddy's local CA;
+# trust it in the browser once, or replace with a real hostname for automatic Let's Encrypt.
+{$MESHADDON_SITE:localhost:8444} {
+    tls internal
+
+    # Proxy to the official MeshCore flasher (it sends no CORS headers), so the
+    # configurator can read the firmware catalogue and releases from its own origin.
+    handle_path /mc/* {
+        reverse_proxy https://flasher.meshcore.io {
+            header_up Host flasher.meshcore.io
+            header_down -Set-Cookie
+        }
+    }
+
+    # MeshAddon firmware builds + manifest (written by firmware/build-release.sh)
+    handle_path /fw/* {
+        root * /fw
+        file_server
+        header Cache-Control "no-cache"
+    }
+
+    handle {
+        root * /srv
+        file_server
+    }
+}

@@ -1,0 +1,17 @@
+# Serves web/ over HTTPS (required for Web Serial), proxies flasher.meshcore.io as /mc/ and serves fw/.
+#   MESHADDON_SITE=myhost.local:8444 docker compose up -d
+services:
+  web:
+    image: caddy:2
+    container_name: meshaddon-web
+    restart: unless-stopped
+    ports: ["8444:8444"]
+    environment:
+      MESHADDON_SITE: ${MESHADDON_SITE:-localhost:8444}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv:ro
+      - ./fw:/fw:ro
+      - caddy_data:/data
+volumes:
+  caddy_data:
