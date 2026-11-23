@@ -72,6 +72,14 @@ MESHADDON_SITE=localhost:8444 docker compose up -d     # Caddy: HTTPS + flasher 
 For a quick look without Docker, run `python3 -m http.server -d web 8000` and open http://localhost:8000. Demo mode, USB and the console work.
 The **update check** needs the Caddy setup, which proxies `flasher.meshcore.io` (it sends no CORS headers) as `/mc/`.
 
+**Apache + PHP hosting** (shared web hosting is fine, as long as it has HTTPS): `deploy/apache/` has a small allow-listed
+PHP proxy (`mc.php`, replaces Caddy's `/mc/`) and an `.htaccess`. Deploy over SSH with
+```bash
+deploy/apache/deploy.sh user@host:path/to/webroot/gpio-configurator
+```
+If the site's root `.htaccess` sends everything to an app (WordPress, BookStack …), exclude the folder there:
+`RewriteCond %{REQUEST_URI} !^/gpio-configurator(/|$)`.
+
 ### 2. Install MeshAddon
 - Plug the Heltec V4 into the computer running the browser → **Connect USB** → **Install MeshAddon…** (or **Firmware & updates → Update now…**).
 - **Update** writes only the app partition: the node keeps its identity, name, radio settings and passwords. **Full install** erases the flash and gives the node a new identity.

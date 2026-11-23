@@ -1,0 +1,13 @@
+# MeshAddon configurator on Apache (copy to <dir>/.htaccess next to index.html)
+DirectoryIndex index.html
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^\.cache(/|$) - [F]
+    RewriteRule ^mc/(.*)$ mc.php?p=$1 [QSA,L]
+</IfModule>
+<FilesMatch "\.(json)$">
+    Header set Cache-Control "no-cache"
+</FilesMatch>
+<FilesMatch "\.(html|js)$">
+    Header set Cache-Control "no-cache"
+</FilesMatch>
