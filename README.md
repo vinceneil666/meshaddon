@@ -6,7 +6,9 @@ MeshAddon is a small add-on to the official [MeshCore](https://github.com/meshco
 a command channel and an optional Raspberry Pi "script runner", plus a web configurator that talks to the board over USB (Web Serial).
 The configurator shows live traffic and where things are wired, and it can install or update the firmware.
 
-![MeshAddon configurator, overview](docs/screenshots/overview.png)
+**▶ Try it now: [meshwiki.no/gpio-configurator](https://meshwiki.no/gpio-configurator/)** (Chrome or Edge; use **Demo mode** if you have no board at hand)
+
+[![MeshAddon configurator, overview](docs/screenshots/overview.png)](https://meshwiki.no/gpio-configurator/)
 
 ## What it does
 
@@ -61,7 +63,9 @@ Unknown commands get no reply. Replies are rate-limited to 1 every 5 s (EU868 du
 
 ## Quick start
 
-### 1. Run the configurator
+### 1. Open the configurator
+The easiest way is the hosted copy at **https://meshwiki.no/gpio-configurator/**, so there's nothing to install. To run your own copy instead:
+
 Web Serial needs **Chrome or Edge**, and the page has to be served over **HTTPS or localhost**.
 
 ```bash
