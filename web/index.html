@@ -41,6 +41,8 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button:disabled{opacity:.45;cursor:not-allowed}
 select,input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;min-width:0}
 .spacer{flex:1}
+.doclink{color:var(--accent);text-decoration:none;font-weight:500;padding:6px 4px}
+.doclink:hover{text-decoration:underline}
 main{display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:12px;padding:12px 16px}
 @media (max-width:1200px){main{grid-template-columns:minmax(0,1fr)} }
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
@@ -121,6 +123,7 @@ details.hw dl{margin-top:6px} details.hw dd{font-family:inherit}
   <button id="btnConnect" class="primary">Connect USB</button>
   <button id="btnDemo">Demo mode</button>
   <button id="btnDisconnect" disabled>Disconnect</button>
+  <a class="doclink" href="https://github.com/vinceneil666/meshaddon#readme" target="_blank" rel="noopener">Documentation ↗</a>
   <span class="spacer"></span>
   <button id="btnRead" disabled title="Read config from device">Read device</button>
   <button id="btnApply" disabled title="Write pending changes to device">Apply <span id="pendingCount" class="badge">0</span></button>
